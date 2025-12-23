@@ -52,6 +52,7 @@
     "three": "^0.175.0",
     "usehooks-ts": "^3.1.1",
     "vitest": "^3.1.1",
+    "workbox-window": "^7.4.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -71,7 +72,8 @@
     "globals": "^15.15.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.6"
+    "vite": "^6.2.6",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "description": "This project was created by WoodwardStudio Dev Agent.",
   "main": "eslint.config.js",

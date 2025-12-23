@@ -8,7 +8,7 @@ import Providers from "@components/custom/providers/Providers";
 import BasicNavbar from '@components/custom/ReusableNavbar/BasicNavbar';
 import { Container, Typography, Box } from "@mui/material";
 import SettingsPage, { ProfileContent } from "@components/pages/SettingsPage";
-import StudioHomePage from "@components/pages/StudioHomePage";
+import StudioHomePage, { tabToRoute } from "@components/pages/StudioHomePage";
 import AuthPage from "@components/Auth/AuthPage";
 import { useEffect, useState } from "react";
 import { useSupabaseStore } from "@store/supabaseStore";
@@ -16,6 +16,7 @@ import { supabase } from "@api/supabase";
 import EditorPage from "@components/pages/EditorPage";
 import FeedPage from "@components/pages/FeedPage";
 import ProfilePage from "@components/pages/ProfilePage";
+import { BottomDock } from "@components/pages/StudioHomePage";
 
 
 export function AuthCallback() {
@@ -128,6 +129,10 @@ export default function Layout() {
             <BasicNavbar />
             <Box sx={{ mt: 10 }}>
               <Outlet />
+              <BottomDock 
+                active="studio" 
+                onSelect={(t) => navigate(tabToRoute(t))} 
+                />
             </Box>
             {/* <Container maxWidth={false} sx={{ mt: 10 }}>
             </Container> */}

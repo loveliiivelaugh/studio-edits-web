@@ -9,7 +9,7 @@ export default function BasicNavbar() {
     const navigate = useNavigate();
     const supabaseStore = useSupabaseStore();
     return (
-        <AppBar sx={{ backgroundColor: "transparent", color: "#333", backdropFilter: "blur(10px)", boxShadow: "none" }}>
+        <AppBar sx={{ backgroundColor: "rgba(33,33,33,0.4)", color: "#ddd", backdropFilter: "blur(10px)", boxShadow: "none" }}>
             <Toolbar>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <ListItem sx={{ flexGrow: 1, minWidth: 200 }}>
@@ -20,12 +20,12 @@ export default function BasicNavbar() {
                             }
                         />
                     </ListItem>
-                    <Button color="inherit" onClick={() => navigate('/')}>Home</Button>
+                    {/* <Button color="inherit" onClick={() => navigate('/')}>Home</Button>
                     <Button color="inherit" onClick={() => navigate('/image')}>Image</Button>
                     <Button color="inherit" onClick={() => navigate('/editor')}>Video</Button>
                     <Button color="inherit" onClick={() => navigate('/feed')}>Feed</Button>
                     <Button color="inherit" onClick={() => navigate('/profile')}>Profile</Button>
-                    <Button color="inherit" onClick={() => navigate('/settings')}>Settings</Button>
+                    <Button color="inherit" onClick={() => navigate('/settings')}>Settings</Button> */}
                 </Box>
                 <Box sx={{ flexGrow: 1, px: 2 }}>
                     {/* <TextField

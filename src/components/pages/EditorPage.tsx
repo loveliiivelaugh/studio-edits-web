@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
+import EditorTimeline from '@components/custom/VideoEditor/EditorTimeline';
 
 type ActiveTool = 'tl' | 'tx' | 'mu' | 'fx' | 'ml' | 'ai' | 'ch' | 'ex';
 
@@ -91,6 +92,7 @@ export default function EditorPage() {
           sx={{
             width: '100%',
             height: '100%',
+            maxHeight: "60%",
             borderRadius: 3,
             border: '1px solid rgba(148,163,184,0.18)',
             background:
@@ -342,6 +344,32 @@ export default function EditorPage() {
             }}
           >
             Active tool: {activeTool.toUpperCase()}
+            {/* {activeTool.toUpperCase() === 'timeline' && (
+                // project={project} ui={ui} playback={playback} />
+            )} */}
+            {/* @ts-ignore */}
+            <EditorTimeline />
+            {/* {activeTool.toUpperCase() === 'music' && (
+                <EditorMusicPanel project={project} ui={ui} />
+            )}
+            {activeTool.toUpperCase() === 'text' && (
+                <EditorTextPanel project={project} ui={ui} />
+            )}
+            {activeTool.toUpperCase() === 'effects' && (
+                <EditorEffectsPanel project={project} ui={ui} />
+            )}
+            {activeTool.toUpperCase() === 'ml' && (
+                <EditorMlPanel ui={ui} />
+            )}
+            {activeTool.toUpperCase() === 'ai' && (
+                <EditorAiPanel ui={ui} smartEdit={smartEdit} />
+            )}
+            {activeTool.toUpperCase() === 'export' && (
+                <EditorExportPanel project={project} ui={ui} />
+            )}
+            {activeTool.toUpperCase() === 'chat' && (
+                <EditorChatPanel projectId={project.id} />
+            )} */}
           </Box>
         )}
       </AnimatePresence>
