@@ -444,6 +444,14 @@ import EditorTimeline from '@components/custom/VideoEditor/EditorTimeline';
 // import { motion } from 'framer-motion';
 import { Paper } from "@mui/material";
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import EditorTextPanel from '@components/custom/VideoEditor/EditorTextPanel';
+import EditorEffectsPanel from '@components/custom/VideoEditor/EditorEffectsPanel';
+import EditorExportPanel from '@components/custom/VideoEditor/EditorExportPanel';
+import EditorMusicPanelWeb from '@components/custom/VideoEditor/EditorMusicPanel';
+import ImageEditorAiChatPanelWeb from '@components/custom/VideoEditor/ImageEditorAi';
+import EditorChatPanelWeb from '@components/custom/VideoEditor/EditorChatPanel';
+import EditorAIPanelWeb from '@components/custom/VideoEditor/EditorAiPanel';
+import EditorMlPanelWeb from '@components/custom/VideoEditor/EditorMlPanel';
 
 type ToolDef<T extends string> = { key: T; label: string; emoji: string };
 
@@ -781,13 +789,34 @@ export default function EditorPage() {
                 position: 'absolute',
                 left: 16,
                 bottom: 8,
-                width: isLandscape ? 520 : 340,
+                // width: isLandscape ? 520 : 340,
                 maxWidth: '85vw',
-                p: 4
+                p: 2,
             }}
         >
             {/* @ts-expect-error */}
         {ui.activeTool === 'timeline' && <EditorTimeline ui={ui} project={project} />}
+            {/* @ts-expect-error */}
+        {ui.activeTool === 'text' && <EditorTextPanel ui={ui} project={project} />}
+            {/* @ts-expect-error */}
+        {ui.activeTool === 'effects' && <EditorEffectsPanel ui={ui} project={project} />}
+            {/* @ts-expect-error */}
+        {ui.activeTool === 'export' && <EditorExportPanel ui={ui} project={project} />}
+            {/* @ts-expect-error */}
+        {ui.activeTool === 'music' && <EditorMusicPanelWeb ui={ui} project={project} />}
+            {/* @ts-expect-error */}
+        {ui.activeTool === 'ai' && <ImageEditorAiChatPanelWeb ui={ui} project={project} />}
+        {ui.activeTool === 'chat' && (
+            <>
+                {/* @ts-expect-error */}
+                <EditorChatPanelWeb projectId={"proj-231342"} ui={ui} project={project} />
+                {/* @ts-expect-error */}
+                <EditorAIPanelWeb projectId={"proj-231342"} ui={ui} project={project} smartEdit={smartEdit} />
+            </>
+        )}
+            {/* @ts-expect-error */}
+        {ui.activeTool === 'ml' && <EditorMlPanelWeb projectId={"proj-231342"} ui={ui} project={project} />}
+
         {/* plug in other panels later */}
         </Box>
       </Box>
