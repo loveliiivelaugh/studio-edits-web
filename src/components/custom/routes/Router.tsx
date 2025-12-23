@@ -2,7 +2,8 @@ import {
     createBrowserRouter,
     RouterProvider,
     Outlet,
-    useNavigate
+    useNavigate,
+    useLocation
 } from "react-router";
 import Providers from "@components/custom/providers/Providers";
 import BasicNavbar from '@components/custom/ReusableNavbar/BasicNavbar';
@@ -17,6 +18,7 @@ import EditorPage from "@components/pages/EditorPage";
 import FeedPage from "@components/pages/FeedPage";
 import ProfilePage from "@components/pages/ProfilePage";
 import { BottomDock } from "@components/pages/StudioHomePage";
+import MediaDetailPage from "@components/pages/MediaDetailPage";
 
 
 export function AuthCallback() {
@@ -56,6 +58,10 @@ const routes = [
         element: <ProfilePage />
     },
     {
+        path: "/media",
+        element: <MediaDetailPage />
+    },
+    {
         label: "Settings",
         path: "/settings",
         element: <ProfileContent profile={{
@@ -79,6 +85,9 @@ const routes = [
 
 export default function Layout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  console.log("Current location: ", location)
+  const isStudioPage = location.pathname.includes("editor") || location.pathname.includes("image");
 
   const session = useSupabaseStore((s) => s.session);
   const setSession = useSupabaseStore((s) => s.setSession);
@@ -129,10 +138,12 @@ export default function Layout() {
             <BasicNavbar />
             <Box sx={{ mt: 10 }}>
               <Outlet />
-              <BottomDock 
-                active="studio" 
-                onSelect={(t) => navigate(tabToRoute(t))} 
-                />
+                {!isStudioPage && (
+                    <BottomDock 
+                        active="studio" 
+                        onSelect={(t) => navigate(tabToRoute(t))} 
+                    />
+                )}
             </Box>
             {/* <Container maxWidth={false} sx={{ mt: 10 }}>
             </Container> */}

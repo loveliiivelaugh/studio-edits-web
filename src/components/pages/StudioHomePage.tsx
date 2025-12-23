@@ -658,8 +658,8 @@ function BottomDock({
 }) {
   const items: { key: TabKey; icon: React.ReactNode; label: string }[] = [
     { key: "studio", icon: <CameraAltOutlinedIcon fontSize="small" />, label: "Studio" },
-    { key: "image", icon: <ImageOutlinedIcon fontSize="small" />, label: "Image" },
-    { key: "editor", icon: <VideocamOutlinedIcon fontSize="small" />, label: "Editor" },
+    // { key: "image", icon: <ImageOutlinedIcon fontSize="small" />, label: "Image" },
+    // { key: "editor", icon: <VideocamOutlinedIcon fontSize="small" />, label: "Editor" },
     { key: "feed", icon: <AutoAwesomeOutlinedIcon fontSize="small" />, label: "Feed" },
     { key: "profile", icon: <PersonOutlineOutlinedIcon fontSize="small" />, label: "Profile" },
     { key: "settings", icon: <SettingsOutlinedIcon fontSize="small" />, label: "Settings" },

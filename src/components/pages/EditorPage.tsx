@@ -419,7 +419,7 @@
 // }
 // src/pages/EditorPage.tsx
 import * as React from 'react';
-import { useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import {
   Box,
   Button,
@@ -438,6 +438,134 @@ import { useEditorPlayback } from '@store/useEditorPlayback';
 import { useSmartEdit } from '@store/useSmartEdit';
 
 import EditorTimeline from '@components/custom/VideoEditor/EditorTimeline';
+// BottomToolBar.tsx (or inline in EditorPage)
+// import * as React from 'react';
+// import { Box, IconButton, Paper, Stack, Tooltip, Typography } from '@mui/material';
+// import { motion } from 'framer-motion';
+import { Paper } from "@mui/material";
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+
+type ToolDef<T extends string> = { key: T; label: string; emoji: string };
+
+export function BottomToolBar<T extends string>({
+  toolDefs,
+  activeTool,
+  setActiveTool,
+  onExit,
+}: {
+  toolDefs: ToolDef<T>[];
+  activeTool: T;
+  setActiveTool: (t: T) => void;
+  onExit: () => void;
+}) {
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 50,
+        px: 1.25,
+        pb: 1.25,
+        // keeps it comfy above iOS PWA safe-area
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 10px)',
+        pointerEvents: 'none',
+      }}
+    >
+      <Paper
+        component={motion.div}
+        initial={{ y: 18, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        elevation={0}
+        sx={{
+          pointerEvents: 'auto',
+          mx: 'auto',
+          maxWidth: 980,
+          borderRadius: 999,
+          border: '1px solid rgba(148,163,184,0.20)',
+          bgcolor: 'rgba(2,6,23,0.70)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 18px 60px rgba(0,0,0,0.45)',
+          px: 1,
+          py: 0.75,
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+          {/* EXIT */}
+          <Tooltip title="Exit editor" placement="top">
+            <IconButton
+              onClick={onExit}
+              sx={{
+                width: 46,
+                height: 46,
+                borderRadius: 999,
+                border: '1px solid rgba(148,163,184,0.22)',
+                bgcolor: 'rgba(15,23,42,0.70)',
+                color: '#E5E7EB',
+                '&:hover': { bgcolor: 'rgba(30,41,59,0.85)' },
+              }}
+            >
+              <CloseRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* TOOLS */}
+          <Box
+            sx={{
+              flex: 1,
+              overflowX: 'auto',
+              px: 0.75,
+              '&::-webkit-scrollbar': { height: 6 },
+              '&::-webkit-scrollbar-thumb': { background: 'rgba(148,163,184,0.22)', borderRadius: 999 },
+            }}
+          >
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ width: 'max-content' }}>
+              {toolDefs.map((t) => {
+                const active = activeTool === t.key;
+                return (
+                  <Tooltip key={t.key} title={`${t.emoji} ${t.label}`} placement="top">
+                    <IconButton
+                      onClick={() => setActiveTool(t.key)}
+                      sx={{
+                        width: 46,
+                        height: 46,
+                        borderRadius: 999,
+                        border: '1px solid',
+                        borderColor: active
+                          ? 'rgba(129,140,248,0.75)'
+                          : 'rgba(148,163,184,0.22)',
+                        bgcolor: active ? 'rgba(79,70,229,0.85)' : 'rgba(15,23,42,0.70)',
+                        color: '#E5E7EB',
+                        boxShadow: active ? '0 10px 24px rgba(79,70,229,0.35)' : 'none',
+                        '&:hover': {
+                          bgcolor: active ? 'rgba(79,70,229,0.95)' : 'rgba(30,41,59,0.80)',
+                        },
+                        display: 'grid',
+                        placeItems: 'center',
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 12, fontWeight: 900, lineHeight: 1 }}>
+                        {t.emoji}
+                        <Box component="span" sx={{ opacity: 0.9, ml: 0.35 }}>
+                          {String(t.key).slice(0, 2).toUpperCase()}
+                        </Box>
+                      </Typography>
+                    </IconButton>
+                  </Tooltip>
+                );
+              })}
+            </Stack>
+          </Box>
+
+          {/* spacer to balance exit button */}
+          <Box sx={{ width: 46 }} />
+        </Stack>
+      </Paper>
+    </Box>
+  );
+}
 
 function formatTime(sec: number) {
   const s = Math.max(0, Math.floor(sec || 0));
@@ -490,6 +618,8 @@ export default function EditorPage() {
     project,
     smartPreviewUrl: smartEdit.smartPreviewUrl,
   });
+
+  const navigate = useNavigate();
 
 //   if (!project) return <EmptyState />;
 
@@ -663,7 +793,7 @@ export default function EditorPage() {
       </Box>
 
       {/* RIGHT TOOL DOCK */}
-      <Box sx={{ position: 'absolute', top: 86, right: 14, zIndex: 20 }}>
+      {/* <Box sx={{ position: 'absolute', top: 86, right: 14, zIndex: 20 }}>
         <Box
           sx={{
             p: 0.75,
@@ -711,7 +841,14 @@ export default function EditorPage() {
             })}
           </Stack>
         </Box>
-      </Box>
+      </Box> */}
+
+      <BottomToolBar
+        toolDefs={toolDefs}
+        activeTool={ui.activeTool}
+        setActiveTool={ui.setActiveTool}
+        onExit={() => navigate('/')} // or nav(-1)
+      />
 
       {/* Small “active tool” toast */}
       <AnimatePresence>
