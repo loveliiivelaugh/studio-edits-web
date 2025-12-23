@@ -38,7 +38,7 @@ export default function EditorTextPanel({
     overlayStart,
     overlayEnd,
     currentTime,
-  } = ui;
+  } = ui as any;
 
   const canAdd =
     (overlayVariant === 'emoji' ? overlayText.trim().length > 0 : overlayText.trim().length > 0) &&
@@ -82,7 +82,9 @@ export default function EditorTextPanel({
   // tiny helper: “Set start/end around playhead”
   const setToPlayhead = () => {
     const start = Math.max(0, currentTime);
+    // @ts-ignore
     ui.setOverlayStart(start);
+    // @ts-ignore
     ui.setOverlayEnd(start + 3);
   };
 

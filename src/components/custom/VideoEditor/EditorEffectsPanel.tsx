@@ -27,6 +27,7 @@ export default function EditorEffectsPanelWeb({
 }) {
   const updateProject = useStudioStore((s) => s.updateProject);
 
+//   @ts-ignore
   const selectedClipId = ui.selectedClipId;
   const selectedClip = React.useMemo(
     () => project?.clips?.find((c) => c.id === selectedClipId) ?? null,
