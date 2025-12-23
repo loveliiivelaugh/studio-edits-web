@@ -24,52 +24,6 @@ export default defineConfig({
           { src: '/assets/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      // registerType: 'autoUpdate',
-      // devOptions: {
-      //   enabled: true, // allows testing PWA locally
-      // },
-      // includeAssets: [
-      //   'favicon.ico',
-      //   'apple-touch-icon.png',
-      //   'maskable-icon.png',
-      // ],
-      // manifest: {
-      //   name: 'OpenStudio',
-      //   short_name: 'OpenStudio',
-      //   description: 'OpenStudio Creations',
-      //   start_url: '/',
-      //   scope: '/',
-      //   display: 'standalone',
-      //   background_color: '#050816',
-      //   theme_color: '#4F46E5',
-      //   icons: [
-      //     {
-      //       src: '/pwa-192.png',
-      //       sizes: '192x192',
-      //       type: 'image/png',
-      //     },
-      //     {
-      //       src: '/pwa-512.png',
-      //       sizes: '512x512',
-      //       type: 'image/png',
-      //     },
-      //     {
-      //       src: '/maskable-icon.png',
-      //       sizes: '512x512',
-      //       type: 'image/png',
-      //       purpose: 'maskable',
-      //     },
-      //   ],
-      // },
-      // workbox: {
-      //   // Keep it minimal: precache app shell, do NOT aggressively cache APIs.
-      //   runtimeCaching: [
-      //     {
-      //       urlPattern: ({ url }: { url: { pathname: string} }) => url.pathname.startsWith('/api/'),
-      //       handler: 'NetworkOnly',
-      //     },
-      //   ],
-      // },
     }),
   ],
   resolve: {

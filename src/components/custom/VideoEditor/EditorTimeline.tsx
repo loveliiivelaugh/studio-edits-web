@@ -1,18 +1,18 @@
-// src/components/EditorTimeline.web.tsx
-import React from 'react';
-import { Box, Typography, Button, CircularProgress } from '@mui/material';
-// import { uploadClipFileWeb } from '@/utilities/lib/uploadClip.web';
-// import { pickVideoFile } from '@/utilities/lib/pickVideoFile.web';
-// import { getVideoDurationSeconds } from '@/utilities/lib/getVideoDuration.web';
-import { useStudioStore } from '@store/useStudioStore';
-import type { Clip } from '@store/useStudioStore';
-// src/utilities/lib/uploadClip.web.ts
+// // src/components/EditorTimeline.web.tsx
+// import React from 'react';
+// import { Box, Typography, Button, CircularProgress } from '@mui/material';
+// // import { uploadClipFileWeb } from '@/utilities/lib/uploadClip.web';
+// // import { pickVideoFile } from '@/utilities/lib/pickVideoFile.web';
+// // import { getVideoDurationSeconds } from '@/utilities/lib/getVideoDuration.web';
+// import { useStudioStore } from '@store/useStudioStore';
+// import type { Clip } from '@store/useStudioStore';
+// // src/utilities/lib/uploadClip.web.ts
 import {client} from '@api/index';
 
-/**
- * Web upload: takes a File from <input type="file" /> and uploads via multipart/form-data.
- * Returns the backend URL (remoteUri) for the uploaded clip.
- */
+// /**
+//  * Web upload: takes a File from <input type="file" /> and uploads via multipart/form-data.
+//  * Returns the backend URL (remoteUri) for the uploaded clip.
+//  */
 export async function uploadClipFileWeb(file: File): Promise<string> {
   const formData = new FormData();
 
@@ -67,77 +67,307 @@ export async function getVideoDurationSeconds(objectUrl: string): Promise<number
     };
   });
 }
-export default function EditorTimelineWeb({
-  project,
-  ui,
-}: {
-  project: any;
-  ui: any; // your editor ui store object (selectedClipId, setBusyReason, removeClip, setClips, etc.)
-}) {
+// export default function EditorTimelineWeb({
+//   project,
+//   ui,
+// }: {
+//   project: any;
+//   ui: any; // your editor ui store object (selectedClipId, setBusyReason, removeClip, setClips, etc.)
+// }) {
+//   const updateProject = useStudioStore((s) => s.updateProject);
+
+//   const clips: Clip[] = project?.clips ?? [];
+//   const selectedClipId = ui?.selectedClipId ?? null;
+
+//   const [isUploadingClip, setIsUploadingClip] = React.useState(false);
+
+//   const formatTime = (seconds: number) => {
+//     const m = Math.floor(seconds / 60);
+//     const s = Math.floor(seconds % 60);
+//     return `${m}:${s < 10 ? '0' : ''}${s}`;
+//   };
+
+//   const syncClipsToProject = (nextClips: Clip[]) => {
+//     ui.setClips(nextClips);
+//     if (!project) return;
+
+//     updateProject(project.id, (p: any) => ({
+//       ...p,
+//       clips: nextClips.map((c, idx) => ({ ...c, order: idx })),
+//     }));
+//   };
+
+//   const handleSelectClip = (clipId: string) => ui.setSelectedClipId(clipId);
+
+//   const handleRemoveClip = (clipId: string) => {
+//     // if you already have ui.removeClip(), you can call that
+//     // but still keep project store in sync:
+//     const next = clips.filter((c) => c.id !== clipId).map((c, idx) => ({ ...c, order: idx }));
+//     syncClipsToProject(next);
+//   };
+
+//   const handleAddClip = async () => {
+//     const file = await pickVideoFile();
+//     if (!file) return;
+
+//     // local preview URL (web)
+//     const localUri = URL.createObjectURL(file);
+
+//     let remoteUrl = '';
+//     try {
+//       setIsUploadingClip(true);
+//       ui.setBusyReason?.('uploading');
+//       remoteUrl = await uploadClipFileWeb(file);
+//     } catch (e) {
+//       console.error('Upload clip failed', e);
+//       // you can allow local-only
+//       remoteUrl = '';
+//     } finally {
+//       setIsUploadingClip(false);
+//       ui.setBusyReason?.('none');
+//     }
+
+//     // duration (seconds)
+//     const durationSeconds = await getVideoDurationSeconds(localUri);
+
+//     const order = clips.length;
+//     const newClip: Clip = {
+//       id: `clip-${Date.now()}`,
+//       // web: local object URL for preview
+//       localUri,
+//       uri: localUri,
+//       // @ts-ignore
+//       remoteUri: remoteUrl || undefined,
+//       start: 0,
+//       end: durationSeconds,
+//       order,
+//       label: `Clip ${order + 1}`,
+//       transitionAfter: 'none',
+//       filter: 'none',
+//       speed: 1,
+//     };
+
+//     const next = [...clips, newClip].sort((a, b) => a.order - b.order);
+//     syncClipsToProject(next);
+//   };
+
+//   return (
+//     <Box sx={{ mt: 1, bgcolor: '#020617' }}>
+//       <Typography sx={{ color: '#9ca3af', fontSize: 12, mb: 0.5 }}>
+//         Timeline
+//       </Typography>
+
+//       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+//         <Button
+//           variant="outlined"
+//           size="small"
+//           sx={{
+//             borderRadius: 999,
+//             borderColor: '#374151',
+//             color: '#e5e7eb',
+//             textTransform: 'none',
+//           }}
+//           onClick={() => ui.setTrimVisible?.(true)}
+//         >
+//           Trim
+//         </Button>
+//       </Box>
+
+//       {/* Horizontal scroll row */}
+//       <Box
+//         sx={{
+//           display: 'flex',
+//           gap: 1,
+//           overflowX: 'auto',
+//           px: 1.5,
+//           pb: 1,
+//           '&::-webkit-scrollbar': { height: 8 },
+//           '&::-webkit-scrollbar-thumb': { background: '#1f2937', borderRadius: 999 },
+//         }}
+//       >
+//         {/* Add clip card */}
+//         <Box
+//           onClick={handleAddClip}
+//           sx={{
+//             width: 92,
+//             flex: '0 0 auto',
+//             borderRadius: 2,
+//             p: 1,
+//             bgcolor: '#111827',
+//             border: '1px solid #1f2937',
+//             cursor: 'pointer',
+//             userSelect: 'none',
+//             display: 'flex',
+//             flexDirection: 'column',
+//             gap: 0.5,
+//             alignItems: 'center',
+//             justifyContent: 'center',
+//           }}
+//         >
+//           <Typography sx={{ color: '#e5e7eb', fontSize: 11, fontWeight: 700 }}>
+//             {isUploadingClip ? 'Uploading…' : 'Add clip'}
+//           </Typography>
+//           <Typography sx={{ color: '#9ca3af', fontSize: 18, lineHeight: 1 }}>
+//             {isUploadingClip ? <CircularProgress size={14} /> : '+'}
+//           </Typography>
+//         </Box>
+
+//         {/* Clip cards */}
+//         {clips.map((clip) => {
+//           const isSelected = clip.id === selectedClipId;
+
+//           return (
+//             <Box
+//               key={clip.id}
+//               sx={{
+//                 position: 'relative',
+//                 width: 92,
+//                 flex: '0 0 auto',
+//               }}
+//             >
+//               <Box
+//                 onClick={() => handleSelectClip(clip.id)}
+//                 sx={{
+//                   borderRadius: 2,
+//                   p: 1,
+//                   bgcolor: '#111827',
+//                   border: `1px solid ${isSelected ? '#6366f1' : '#1f2937'}`,
+//                   cursor: 'pointer',
+//                   userSelect: 'none',
+//                 }}
+//               >
+//                 <Box
+//                   sx={{
+//                     width: '100%',
+//                     height: 54,
+//                     borderRadius: 1.5,
+//                     bgcolor: '#0b1220',
+//                     mb: 0.5,
+//                     border: '1px solid #0f172a',
+//                   }}
+//                 />
+//                 <Typography
+//                   sx={{
+//                     color: isSelected ? '#c7d2fe' : '#e5e7eb',
+//                     fontSize: 11,
+//                     whiteSpace: 'nowrap',
+//                     overflow: 'hidden',
+//                     textOverflow: 'ellipsis',
+//                   }}
+//                   title={clip.label ?? clip.id}
+//                 >
+//                   {clip.label ?? clip.id}
+//                 </Typography>
+//                 <Typography sx={{ color: '#9ca3af', fontSize: 10, mt: 0.25 }}>
+//                   {formatTime(clip.start)}–{formatTime(clip.end)}
+//                 </Typography>
+//               </Box>
+
+//               {/* delete button */}
+//               <Box
+//                 onClick={() => handleRemoveClip(clip.id)}
+//                 sx={{
+//                   position: 'absolute',
+//                   top: 6,
+//                   right: 6,
+//                   width: 18,
+//                   height: 18,
+//                   borderRadius: 999,
+//                   bgcolor: 'rgba(0,0,0,0.7)',
+//                   color: '#f9fafb',
+//                   display: 'grid',
+//                   placeItems: 'center',
+//                   fontSize: 12,
+//                   fontWeight: 800,
+//                   cursor: 'pointer',
+//                   userSelect: 'none',
+//                 }}
+//                 title="Remove clip"
+//               >
+//                 ×
+//               </Box>
+//             </Box>
+//           );
+//         })}
+//       </Box>
+//     </Box>
+//   );
+// }
+
+
+
+// src/components/custom/VideoEditor/EditorTimelineWeb.tsx
+import * as React from 'react';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
+import type { Project, Clip } from '@store/useStudioStore';
+import { useStudioStore } from '@store/useStudioStore';
+import { useEditorUiStore } from '@store/useEditorUiStore';
+
+// import { pickVideoFile } from '@utilities/lib/pickVideoFile.web';
+// import { getVideoDurationSeconds } from '@utilities/lib/getVideoDuration.web';
+// import { uploadClipFileWeb } from '@utilities/lib/uploadClipFile.web';
+
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+export default function EditorTimelineWeb({ project }: { project: Project }) {
+  const ui = useEditorUiStore();
   const updateProject = useStudioStore((s) => s.updateProject);
 
   const clips: Clip[] = project?.clips ?? [];
-  const selectedClipId = ui?.selectedClipId ?? null;
+  const selectedClipId = ui.selectedClipId ?? null;
 
   const [isUploadingClip, setIsUploadingClip] = React.useState(false);
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
   const syncClipsToProject = (nextClips: Clip[]) => {
     ui.setClips(nextClips);
-    if (!project) return;
-
-    updateProject(project.id, (p: any) => ({
+    updateProject(project.id, (p) => ({
       ...p,
       clips: nextClips.map((c, idx) => ({ ...c, order: idx })),
     }));
   };
 
-  const handleSelectClip = (clipId: string) => ui.setSelectedClipId(clipId);
-
   const handleRemoveClip = (clipId: string) => {
-    // if you already have ui.removeClip(), you can call that
-    // but still keep project store in sync:
-    const next = clips.filter((c) => c.id !== clipId).map((c, idx) => ({ ...c, order: idx }));
+    const next = clips
+      .filter((c) => c.id !== clipId)
+      .map((c, idx) => ({ ...c, order: idx }));
     syncClipsToProject(next);
+
+    if (ui.selectedClipId === clipId) {
+      ui.setSelectedClipId(next[0]?.id);
+    }
   };
 
   const handleAddClip = async () => {
     const file = await pickVideoFile();
     if (!file) return;
 
-    // local preview URL (web)
     const localUri = URL.createObjectURL(file);
 
-    let remoteUrl = '';
+    let remoteUri = '';
     try {
       setIsUploadingClip(true);
-      ui.setBusyReason?.('uploading');
-      remoteUrl = await uploadClipFileWeb(file);
+      ui.setBusyReason('uploading');
+      remoteUri = await uploadClipFileWeb(file);
     } catch (e) {
-      console.error('Upload clip failed', e);
-      // you can allow local-only
-      remoteUrl = '';
+      console.error('Upload clip failed (web)', e);
+      remoteUri = '';
     } finally {
       setIsUploadingClip(false);
-      ui.setBusyReason?.('none');
+      ui.setBusyReason('none');
     }
 
-    // duration (seconds)
     const durationSeconds = await getVideoDurationSeconds(localUri);
 
     const order = clips.length;
     const newClip: Clip = {
       id: `clip-${Date.now()}`,
-      // web: local object URL for preview
-      localUri,
       uri: localUri,
-      // @ts-ignore
-      remoteUri: remoteUrl || undefined,
+      localUri,
+      remoteUri: remoteUri || '', // keep as '' if not uploaded yet
       start: 0,
       end: durationSeconds,
       order,
@@ -149,27 +379,60 @@ export default function EditorTimelineWeb({
 
     const next = [...clips, newClip].sort((a, b) => a.order - b.order);
     syncClipsToProject(next);
+    ui.setSelectedClipId(newClip.id);
+    ui.setActiveTool('timeline');
   };
 
   return (
-    <Box sx={{ mt: 1, bgcolor: '#020617' }}>
-      <Typography sx={{ color: '#9ca3af', fontSize: 12, mb: 0.5 }}>
+    <Box sx={{ mt: 1, bgcolor: 'transparent' }}>
+      <Typography sx={{ color: 'rgba(148,163,184,0.75)', fontSize: 12, fontWeight: 800, mb: 1 }}>
         Timeline
       </Typography>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+      <Box sx={{ display: 'flex', gap: 1, mb: 1.25 }}>
         <Button
           variant="outlined"
           size="small"
           sx={{
             borderRadius: 999,
-            borderColor: '#374151',
-            color: '#e5e7eb',
             textTransform: 'none',
+            fontWeight: 800,
+            fontSize: 12,
+            color: '#E5E7EB',
+            borderColor: 'rgba(148,163,184,0.28)',
+            bgcolor: 'rgba(15,23,42,0.55)',
+            '&:hover': { borderColor: '#818CF8', bgcolor: 'rgba(30,41,59,0.75)' },
           }}
-          onClick={() => ui.setTrimVisible?.(true)}
+          onClick={() => ui.setTrimVisible(true)}
         >
           Trim
+        </Button>
+
+        <Button
+          onClick={handleAddClip}
+          variant="contained"
+          size="small"
+          sx={{
+            borderRadius: 999,
+            textTransform: 'none',
+            fontWeight: 900,
+            fontSize: 12,
+            bgcolor: 'rgba(15,23,42,0.75)',
+            color: '#E5E7EB',
+            boxShadow: 'none',
+            border: '1px solid rgba(148,163,184,0.18)',
+            '&:hover': { bgcolor: 'rgba(30,41,59,0.85)' },
+          }}
+          disabled={isUploadingClip}
+        >
+          {isUploadingClip ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={14} />
+              Uploading…
+            </Box>
+          ) : (
+            'Add clip +'
+          )}
         </Button>
       </Box>
 
@@ -179,59 +442,24 @@ export default function EditorTimelineWeb({
           display: 'flex',
           gap: 1,
           overflowX: 'auto',
-          px: 1.5,
+          pr: 1,
           pb: 1,
           '&::-webkit-scrollbar': { height: 8 },
           '&::-webkit-scrollbar-thumb': { background: '#1f2937', borderRadius: 999 },
         }}
       >
-        {/* Add clip card */}
-        <Box
-          onClick={handleAddClip}
-          sx={{
-            width: 92,
-            flex: '0 0 auto',
-            borderRadius: 2,
-            p: 1,
-            bgcolor: '#111827',
-            border: '1px solid #1f2937',
-            cursor: 'pointer',
-            userSelect: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 0.5,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Typography sx={{ color: '#e5e7eb', fontSize: 11, fontWeight: 700 }}>
-            {isUploadingClip ? 'Uploading…' : 'Add clip'}
-          </Typography>
-          <Typography sx={{ color: '#9ca3af', fontSize: 18, lineHeight: 1 }}>
-            {isUploadingClip ? <CircularProgress size={14} /> : '+'}
-          </Typography>
-        </Box>
-
-        {/* Clip cards */}
         {clips.map((clip) => {
           const isSelected = clip.id === selectedClipId;
 
           return (
-            <Box
-              key={clip.id}
-              sx={{
-                position: 'relative',
-                width: 92,
-                flex: '0 0 auto',
-              }}
-            >
+            <Box key={clip.id} sx={{ position: 'relative', width: 96, flex: '0 0 auto' }}>
               <Box
-                onClick={() => handleSelectClip(clip.id)}
+                onClick={() => ui.setSelectedClipId(clip.id)}
                 sx={{
                   borderRadius: 2,
                   p: 1,
-                  bgcolor: '#111827',
-                  border: `1px solid ${isSelected ? '#6366f1' : '#1f2937'}`,
+                  bgcolor: 'rgba(15,23,42,0.75)',
+                  border: `1px solid ${isSelected ? '#6366f1' : 'rgba(148,163,184,0.18)'}`,
                   cursor: 'pointer',
                   userSelect: 'none',
                 }}
@@ -263,7 +491,7 @@ export default function EditorTimelineWeb({
                 </Typography>
               </Box>
 
-              {/* delete button */}
+              {/* delete */}
               <Box
                 onClick={() => handleRemoveClip(clip.id)}
                 sx={{

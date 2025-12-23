@@ -11,7 +11,7 @@ type Args = {
 
 const MASK = "http://localhost:5051/media";
 const MASK2 = "http://localhost:5858/media";
-const ACTUAL = `${process.env.EXPO_PUBLIC_DEV_API_BASE_URL}/api/v1/openstudio/media`;
+const ACTUAL = `${import.meta.env.EXPO_PUBLIC_DEV_API_BASE_URL}/api/v1/openstudio/media`;
 export const unmaskUrl = (url: string) => url.replace(MASK, ACTUAL).replace(MASK2, ACTUAL).replace("%2F", '/');
 
 export function useSmartEdit({ project }: Args) {
