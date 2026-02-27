@@ -1,33 +1,90 @@
-// // src/components/EditorTimeline.web.tsx
-// import React from 'react';
-// import { Box, Typography, Button, CircularProgress } from '@mui/material';
-// // import { uploadClipFileWeb } from '@/utilities/lib/uploadClip.web';
-// // import { pickVideoFile } from '@/utilities/lib/pickVideoFile.web';
-// // import { getVideoDurationSeconds } from '@/utilities/lib/getVideoDuration.web';
-// import { useStudioStore } from '@store/useStudioStore';
-// import type { Clip } from '@store/useStudioStore';
-// // src/utilities/lib/uploadClip.web.ts
-import {client} from '@api/index';
+import * as React from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Paper,
+  Slider,
+  Stack,
+  Typography,
+} from '@mui/material';
+import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded';
+import NorthRoundedIcon from '@mui/icons-material/NorthRounded';
+import SouthRoundedIcon from '@mui/icons-material/SouthRounded';
+import type { Project, Clip } from '@store/useStudioStore';
+import { useStudioStore } from '@store/useStudioStore';
+import { useEditorUiStore } from '@store/useEditorUiStore';
+import { openstudioClient } from '@api/index';
 
-// /**
-//  * Web upload: takes a File from <input type="file" /> and uploads via multipart/form-data.
-//  * Returns the backend URL (remoteUri) for the uploaded clip.
-//  */
+const MIN_CLIP_SPAN_SECONDS = 0.1;
+
+function formatTime(seconds: number) {
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r < 10 ? '0' : ''}${r}`;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(Math.max(n, min), max);
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return 'Request failed.';
+}
+
+function sortAndReindex(clips: Clip[]) {
+  return clips
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((clip, index) => ({ ...clip, order: index }));
+}
+
+function sourceDurationForClip(clip: Clip) {
+  return Math.max(clip.sourceDuration ?? clip.end ?? 0, clip.end ?? 0, clip.start ?? 0);
+}
+
+function timelineSignature(clips: Clip[]) {
+  return JSON.stringify(
+    sortAndReindex(clips).map((clip) => ({
+      id: clip.id,
+      order: clip.order,
+      start: Number((clip.start ?? 0).toFixed(3)),
+      end: Number((clip.end ?? 0).toFixed(3)),
+    }))
+  );
+}
+
+function moveClip(clips: Clip[], clipId: string, direction: -1 | 1) {
+  const ordered = sortAndReindex(clips);
+  const index = ordered.findIndex((clip) => clip.id === clipId);
+  if (index < 0) return ordered;
+
+  const targetIndex = clamp(index + direction, 0, ordered.length - 1);
+  if (targetIndex === index) return ordered;
+
+  const next = ordered.slice();
+  const [item] = next.splice(index, 1);
+  next.splice(targetIndex, 0, item);
+
+  return sortAndReindex(next);
+}
+
 export async function uploadClipFileWeb(file: File): Promise<string> {
   const formData = new FormData();
-
-  // preserve filename if possible
   const filename = file.name || `clip_${Date.now()}.mp4`;
   formData.append('file', file, filename);
 
-  const res = await client.post('/api/v1/openstudio/upload-clip', formData, {
+  const res = await openstudioClient.post('/upload-clip', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
   const data = res.data as { url: string };
   return data.url;
 }
-// src/utilities/lib/pickVideoFile.web.ts
+
 export function pickVideoFile(): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
@@ -43,7 +100,7 @@ export function pickVideoFile(): Promise<File | null> {
     input.click();
   });
 }
-// src/utilities/lib/getVideoDuration.web.ts
+
 export async function getVideoDurationSeconds(objectUrl: string): Promise<number> {
   return new Promise((resolve) => {
     const v = document.createElement('video');
@@ -67,281 +124,77 @@ export async function getVideoDurationSeconds(objectUrl: string): Promise<number
     };
   });
 }
-// export default function EditorTimelineWeb({
-//   project,
-//   ui,
-// }: {
-//   project: any;
-//   ui: any; // your editor ui store object (selectedClipId, setBusyReason, removeClip, setClips, etc.)
-// }) {
-//   const updateProject = useStudioStore((s) => s.updateProject);
-
-//   const clips: Clip[] = project?.clips ?? [];
-//   const selectedClipId = ui?.selectedClipId ?? null;
-
-//   const [isUploadingClip, setIsUploadingClip] = React.useState(false);
-
-//   const formatTime = (seconds: number) => {
-//     const m = Math.floor(seconds / 60);
-//     const s = Math.floor(seconds % 60);
-//     return `${m}:${s < 10 ? '0' : ''}${s}`;
-//   };
-
-//   const syncClipsToProject = (nextClips: Clip[]) => {
-//     ui.setClips(nextClips);
-//     if (!project) return;
-
-//     updateProject(project.id, (p: any) => ({
-//       ...p,
-//       clips: nextClips.map((c, idx) => ({ ...c, order: idx })),
-//     }));
-//   };
-
-//   const handleSelectClip = (clipId: string) => ui.setSelectedClipId(clipId);
-
-//   const handleRemoveClip = (clipId: string) => {
-//     // if you already have ui.removeClip(), you can call that
-//     // but still keep project store in sync:
-//     const next = clips.filter((c) => c.id !== clipId).map((c, idx) => ({ ...c, order: idx }));
-//     syncClipsToProject(next);
-//   };
-
-//   const handleAddClip = async () => {
-//     const file = await pickVideoFile();
-//     if (!file) return;
-
-//     // local preview URL (web)
-//     const localUri = URL.createObjectURL(file);
-
-//     let remoteUrl = '';
-//     try {
-//       setIsUploadingClip(true);
-//       ui.setBusyReason?.('uploading');
-//       remoteUrl = await uploadClipFileWeb(file);
-//     } catch (e) {
-//       console.error('Upload clip failed', e);
-//       // you can allow local-only
-//       remoteUrl = '';
-//     } finally {
-//       setIsUploadingClip(false);
-//       ui.setBusyReason?.('none');
-//     }
-
-//     // duration (seconds)
-//     const durationSeconds = await getVideoDurationSeconds(localUri);
-
-//     const order = clips.length;
-//     const newClip: Clip = {
-//       id: `clip-${Date.now()}`,
-//       // web: local object URL for preview
-//       localUri,
-//       uri: localUri,
-//       // @ts-ignore
-//       remoteUri: remoteUrl || undefined,
-//       start: 0,
-//       end: durationSeconds,
-//       order,
-//       label: `Clip ${order + 1}`,
-//       transitionAfter: 'none',
-//       filter: 'none',
-//       speed: 1,
-//     };
-
-//     const next = [...clips, newClip].sort((a, b) => a.order - b.order);
-//     syncClipsToProject(next);
-//   };
-
-//   return (
-//     <Box sx={{ mt: 1, bgcolor: '#020617' }}>
-//       <Typography sx={{ color: '#9ca3af', fontSize: 12, mb: 0.5 }}>
-//         Timeline
-//       </Typography>
-
-//       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-//         <Button
-//           variant="outlined"
-//           size="small"
-//           sx={{
-//             borderRadius: 999,
-//             borderColor: '#374151',
-//             color: '#e5e7eb',
-//             textTransform: 'none',
-//           }}
-//           onClick={() => ui.setTrimVisible?.(true)}
-//         >
-//           Trim
-//         </Button>
-//       </Box>
-
-//       {/* Horizontal scroll row */}
-//       <Box
-//         sx={{
-//           display: 'flex',
-//           gap: 1,
-//           overflowX: 'auto',
-//           px: 1.5,
-//           pb: 1,
-//           '&::-webkit-scrollbar': { height: 8 },
-//           '&::-webkit-scrollbar-thumb': { background: '#1f2937', borderRadius: 999 },
-//         }}
-//       >
-//         {/* Add clip card */}
-//         <Box
-//           onClick={handleAddClip}
-//           sx={{
-//             width: 92,
-//             flex: '0 0 auto',
-//             borderRadius: 2,
-//             p: 1,
-//             bgcolor: '#111827',
-//             border: '1px solid #1f2937',
-//             cursor: 'pointer',
-//             userSelect: 'none',
-//             display: 'flex',
-//             flexDirection: 'column',
-//             gap: 0.5,
-//             alignItems: 'center',
-//             justifyContent: 'center',
-//           }}
-//         >
-//           <Typography sx={{ color: '#e5e7eb', fontSize: 11, fontWeight: 700 }}>
-//             {isUploadingClip ? 'Uploading…' : 'Add clip'}
-//           </Typography>
-//           <Typography sx={{ color: '#9ca3af', fontSize: 18, lineHeight: 1 }}>
-//             {isUploadingClip ? <CircularProgress size={14} /> : '+'}
-//           </Typography>
-//         </Box>
-
-//         {/* Clip cards */}
-//         {clips.map((clip) => {
-//           const isSelected = clip.id === selectedClipId;
-
-//           return (
-//             <Box
-//               key={clip.id}
-//               sx={{
-//                 position: 'relative',
-//                 width: 92,
-//                 flex: '0 0 auto',
-//               }}
-//             >
-//               <Box
-//                 onClick={() => handleSelectClip(clip.id)}
-//                 sx={{
-//                   borderRadius: 2,
-//                   p: 1,
-//                   bgcolor: '#111827',
-//                   border: `1px solid ${isSelected ? '#6366f1' : '#1f2937'}`,
-//                   cursor: 'pointer',
-//                   userSelect: 'none',
-//                 }}
-//               >
-//                 <Box
-//                   sx={{
-//                     width: '100%',
-//                     height: 54,
-//                     borderRadius: 1.5,
-//                     bgcolor: '#0b1220',
-//                     mb: 0.5,
-//                     border: '1px solid #0f172a',
-//                   }}
-//                 />
-//                 <Typography
-//                   sx={{
-//                     color: isSelected ? '#c7d2fe' : '#e5e7eb',
-//                     fontSize: 11,
-//                     whiteSpace: 'nowrap',
-//                     overflow: 'hidden',
-//                     textOverflow: 'ellipsis',
-//                   }}
-//                   title={clip.label ?? clip.id}
-//                 >
-//                   {clip.label ?? clip.id}
-//                 </Typography>
-//                 <Typography sx={{ color: '#9ca3af', fontSize: 10, mt: 0.25 }}>
-//                   {formatTime(clip.start)}–{formatTime(clip.end)}
-//                 </Typography>
-//               </Box>
-
-//               {/* delete button */}
-//               <Box
-//                 onClick={() => handleRemoveClip(clip.id)}
-//                 sx={{
-//                   position: 'absolute',
-//                   top: 6,
-//                   right: 6,
-//                   width: 18,
-//                   height: 18,
-//                   borderRadius: 999,
-//                   bgcolor: 'rgba(0,0,0,0.7)',
-//                   color: '#f9fafb',
-//                   display: 'grid',
-//                   placeItems: 'center',
-//                   fontSize: 12,
-//                   fontWeight: 800,
-//                   cursor: 'pointer',
-//                   userSelect: 'none',
-//                 }}
-//                 title="Remove clip"
-//               >
-//                 ×
-//               </Box>
-//             </Box>
-//           );
-//         })}
-//       </Box>
-//     </Box>
-//   );
-// }
-
-
-
-// src/components/custom/VideoEditor/EditorTimelineWeb.tsx
-import * as React from 'react';
-import { Box, Button, CircularProgress, Typography } from '@mui/material';
-import type { Project, Clip } from '@store/useStudioStore';
-import { useStudioStore } from '@store/useStudioStore';
-import { useEditorUiStore } from '@store/useEditorUiStore';
-
-// import { pickVideoFile } from '@utilities/lib/pickVideoFile.web';
-// import { getVideoDurationSeconds } from '@utilities/lib/getVideoDuration.web';
-// import { uploadClipFileWeb } from '@utilities/lib/uploadClipFile.web';
-
-function formatTime(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s < 10 ? '0' : ''}${s}`;
-}
 
 export default function EditorTimelineWeb({ project }: { project: Project }) {
   const ui = useEditorUiStore();
-  const updateProject = useStudioStore((s) => s.updateProject);
+  const updateProject = useStudioStore((state) => state.updateProject);
 
-  const clips: Clip[] = project?.clips ?? [];
-  const selectedClipId = ui.selectedClipId ?? null;
+  const persistedClips = React.useMemo(() => sortAndReindex(project?.clips ?? []), [project?.clips]);
+  const persistedSignature = React.useMemo(() => timelineSignature(persistedClips), [persistedClips]);
 
+  const [draftClips, setDraftClips] = React.useState<Clip[]>(persistedClips);
   const [isUploadingClip, setIsUploadingClip] = React.useState(false);
+  const [msg, setMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const syncClipsToProject = (nextClips: Clip[]) => {
-    ui.setClips(nextClips);
-    updateProject(project.id, (p) => ({
-      ...p,
-      clips: nextClips.map((c, idx) => ({ ...c, order: idx })),
-    }));
-  };
+  React.useEffect(() => {
+    setDraftClips(persistedClips);
+  }, [persistedClips, persistedSignature]);
 
-  const handleRemoveClip = (clipId: string) => {
-    const next = clips
-      .filter((c) => c.id !== clipId)
-      .map((c, idx) => ({ ...c, order: idx }));
-    syncClipsToProject(next);
+  const selectedClipId = ui.selectedClipId ?? draftClips[0]?.id;
+  const selectedClip = draftClips.find((clip) => clip.id === selectedClipId) ?? draftClips[0];
 
-    if (ui.selectedClipId === clipId) {
-      ui.setSelectedClipId(next[0]?.id);
-    }
-  };
+  const draftSignature = React.useMemo(() => timelineSignature(draftClips), [draftClips]);
+  const hasPendingEdits = draftSignature !== persistedSignature;
 
-  const handleAddClip = async () => {
+  const orderDirty = React.useMemo(() => {
+    const byId = new Map(persistedClips.map((clip) => [clip.id, clip.order]));
+    return draftClips.some((clip) => byId.get(clip.id) !== clip.order);
+  }, [draftClips, persistedClips]);
+
+  const trimDirty = React.useMemo(() => {
+    const byId = new Map(persistedClips.map((clip) => [clip.id, clip]));
+    return draftClips.some((clip) => {
+      const persisted = byId.get(clip.id);
+      if (!persisted) return false;
+      return persisted.start !== clip.start || persisted.end !== clip.end;
+    });
+  }, [draftClips, persistedClips]);
+
+  React.useEffect(() => {
+    ui.setTimelineDraftDirty(hasPendingEdits);
+    return () => {
+      ui.setTimelineDraftDirty(false);
+    };
+  }, [hasPendingEdits, ui]);
+
+  const syncClipsToProject = React.useCallback(
+    (nextClips: Clip[]) => {
+      const normalized = sortAndReindex(nextClips);
+      ui.setClips(normalized);
+      updateProject(project.id, (p) => ({
+        ...p,
+        clips: normalized,
+      }));
+      setDraftClips(normalized);
+    },
+    [project.id, ui, updateProject]
+  );
+
+  const handleRemoveClip = React.useCallback(
+    (clipId: string) => {
+      const next = sortAndReindex(draftClips.filter((clip) => clip.id !== clipId));
+      syncClipsToProject(next);
+
+      if (ui.selectedClipId === clipId) {
+        ui.setSelectedClipId(next[0]?.id);
+      }
+
+      setMsg({ type: 'success', text: 'Clip removed from timeline.' });
+    },
+    [draftClips, syncClipsToProject, ui]
+  );
+
+  const handleAddClip = React.useCallback(async () => {
     const file = await pickVideoFile();
     if (!file) return;
 
@@ -349,12 +202,16 @@ export default function EditorTimelineWeb({ project }: { project: Project }) {
 
     let remoteUri = '';
     try {
+      setMsg(null);
       setIsUploadingClip(true);
       ui.setBusyReason('uploading');
       remoteUri = await uploadClipFileWeb(file);
-    } catch (e) {
-      console.error('Upload clip failed (web)', e);
+    } catch (error: unknown) {
       remoteUri = '';
+      setMsg({
+        type: 'error',
+        text: `${getErrorMessage(error)} The clip was added locally and can still be edited.`,
+      });
     } finally {
       setIsUploadingClip(false);
       ui.setBusyReason('none');
@@ -362,14 +219,15 @@ export default function EditorTimelineWeb({ project }: { project: Project }) {
 
     const durationSeconds = await getVideoDurationSeconds(localUri);
 
-    const order = clips.length;
+    const order = draftClips.length;
     const newClip: Clip = {
       id: `clip-${Date.now()}`,
       uri: localUri,
       localUri,
-      remoteUri: remoteUri || '', // keep as '' if not uploaded yet
+      remoteUri,
       start: 0,
       end: durationSeconds,
+      sourceDuration: durationSeconds,
       order,
       label: `Clip ${order + 1}`,
       transitionAfter: 'none',
@@ -377,147 +235,369 @@ export default function EditorTimelineWeb({ project }: { project: Project }) {
       speed: 1,
     };
 
-    const next = [...clips, newClip].sort((a, b) => a.order - b.order);
+    const next = sortAndReindex([...draftClips, newClip]);
     syncClipsToProject(next);
     ui.setSelectedClipId(newClip.id);
     ui.setActiveTool('timeline');
-  };
+    setMsg({ type: 'success', text: 'Clip imported and added to timeline.' });
+  }, [draftClips, syncClipsToProject, ui]);
+
+  const updateDraftTrim = React.useCallback((clipId: string, field: 'start' | 'end', value: number) => {
+    setDraftClips((current) =>
+      current.map((clip) => {
+        if (clip.id !== clipId) return clip;
+
+        const maxDuration = Math.max(sourceDurationForClip(clip), MIN_CLIP_SPAN_SECONDS);
+
+        if (field === 'start') {
+          const nextStart = clamp(value, 0, Math.max(clip.end - MIN_CLIP_SPAN_SECONDS, 0));
+          return { ...clip, start: nextStart, sourceDuration: maxDuration };
+        }
+
+        const minEnd = clip.start + MIN_CLIP_SPAN_SECONDS;
+        const nextEnd = clamp(value, minEnd, maxDuration);
+        return { ...clip, end: nextEnd, sourceDuration: maxDuration };
+      })
+    );
+  }, []);
+
+  const applyTrimEdits = React.useCallback(() => {
+    const persistedById = new Map(persistedClips.map((clip) => [clip.id, clip]));
+    const next = draftClips.map((clip) => {
+      const persisted = persistedById.get(clip.id) || clip;
+      return {
+        ...persisted,
+        start: clip.start,
+        end: clip.end,
+        sourceDuration: sourceDurationForClip(clip),
+      };
+    });
+
+    syncClipsToProject(next);
+    setMsg({ type: 'success', text: 'Trim points committed to timeline.' });
+  }, [draftClips, persistedClips, syncClipsToProject]);
+
+  const applySequenceEdits = React.useCallback(() => {
+    const persistedById = new Map(persistedClips.map((clip) => [clip.id, clip]));
+    const next = draftClips.map((clip) => {
+      const persisted = persistedById.get(clip.id) || clip;
+      return {
+        ...persisted,
+        order: clip.order,
+      };
+    });
+
+    syncClipsToProject(next);
+    setMsg({ type: 'success', text: 'Stitch order applied. Export will follow this sequence.' });
+  }, [draftClips, persistedClips, syncClipsToProject]);
 
   return (
-    <Box sx={{ mt: 1, bgcolor: 'transparent' }}>
-      <Typography sx={{ color: 'rgba(148,163,184,0.75)', fontSize: 12, fontWeight: 800, mb: 1 }}>
-        Timeline
-      </Typography>
+    <Paper
+      elevation={0}
+      sx={{
+        p: 1.25,
+        borderRadius: 3,
+        border: '1px solid rgba(148,163,184,0.18)',
+        bgcolor: 'rgba(2,6,23,0.72)',
+        backdropFilter: 'blur(10px)',
+      }}
+    >
+      <Stack spacing={1.1}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+          <Typography sx={{ color: 'rgba(148,163,184,0.9)', fontSize: 12, fontWeight: 900 }}>
+            Timeline
+          </Typography>
 
-      <Box sx={{ display: 'flex', gap: 1, mb: 1.25 }}>
-        <Button
-          variant="outlined"
-          size="small"
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => ui.setTrimVisible(!ui.trimVisible)}
+              sx={{
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 800,
+                fontSize: 12,
+                color: '#E5E7EB',
+                borderColor: 'rgba(148,163,184,0.28)',
+                bgcolor: ui.trimVisible ? 'rgba(30,41,59,0.8)' : 'rgba(15,23,42,0.55)',
+                '&:hover': { borderColor: '#818CF8', bgcolor: 'rgba(30,41,59,0.85)' },
+              }}
+            >
+              {ui.trimVisible ? 'Hide Trim' : 'Trim Clip'}
+            </Button>
+
+            <Button
+              onClick={handleAddClip}
+              variant="contained"
+              size="small"
+              sx={{
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 900,
+                fontSize: 12,
+                bgcolor: 'rgba(15,23,42,0.75)',
+                color: '#E5E7EB',
+                boxShadow: 'none',
+                border: '1px solid rgba(148,163,184,0.18)',
+                '&:hover': { bgcolor: 'rgba(30,41,59,0.85)' },
+              }}
+              disabled={isUploadingClip}
+            >
+              {isUploadingClip ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={14} />
+                  Uploading...
+                </Box>
+              ) : (
+                'Import Clip +'
+              )}
+            </Button>
+          </Stack>
+        </Stack>
+
+        {msg && (
+          <Alert
+            severity={msg.type}
+            sx={{
+              borderRadius: 2,
+              bgcolor: msg.type === 'success' ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.10)',
+              border: '1px solid rgba(148,163,184,0.18)',
+              color: '#E5E7EB',
+              '& .MuiAlert-icon': { color: msg.type === 'success' ? '#22C55E' : '#EF4444' },
+            }}
+          >
+            {msg.text}
+          </Alert>
+        )}
+
+        {hasPendingEdits && (
+          <Alert
+            severity="warning"
+            sx={{
+              borderRadius: 2,
+              bgcolor: 'rgba(245,158,11,0.10)',
+              border: '1px solid rgba(245,158,11,0.35)',
+              color: '#FDE68A',
+            }}
+          >
+            You have uncommitted timeline edits. Apply trim/sequence changes before export.
+          </Alert>
+        )}
+
+        <Box
           sx={{
-            borderRadius: 999,
-            textTransform: 'none',
-            fontWeight: 800,
-            fontSize: 12,
-            color: '#E5E7EB',
-            borderColor: 'rgba(148,163,184,0.28)',
-            bgcolor: 'rgba(15,23,42,0.55)',
-            '&:hover': { borderColor: '#818CF8', bgcolor: 'rgba(30,41,59,0.75)' },
+            display: 'flex',
+            gap: 1,
+            overflowX: 'auto',
+            pr: 1,
+            pb: 1,
+            '&::-webkit-scrollbar': { height: 8 },
+            '&::-webkit-scrollbar-thumb': { background: '#1f2937', borderRadius: 999 },
           }}
-          onClick={() => ui.setTrimVisible(true)}
         >
-          Trim
-        </Button>
+          {draftClips.map((clip) => {
+            const isSelected = clip.id === selectedClipId;
 
-        <Button
-          onClick={handleAddClip}
-          variant="contained"
-          size="small"
-          sx={{
-            borderRadius: 999,
-            textTransform: 'none',
-            fontWeight: 900,
-            fontSize: 12,
-            bgcolor: 'rgba(15,23,42,0.75)',
-            color: '#E5E7EB',
-            boxShadow: 'none',
-            border: '1px solid rgba(148,163,184,0.18)',
-            '&:hover': { bgcolor: 'rgba(30,41,59,0.85)' },
-          }}
-          disabled={isUploadingClip}
-        >
-          {isUploadingClip ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={14} />
-              Uploading…
-            </Box>
-          ) : (
-            'Add clip +'
-          )}
-        </Button>
-      </Box>
-
-      {/* Horizontal scroll row */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 1,
-          overflowX: 'auto',
-          pr: 1,
-          pb: 1,
-          '&::-webkit-scrollbar': { height: 8 },
-          '&::-webkit-scrollbar-thumb': { background: '#1f2937', borderRadius: 999 },
-        }}
-      >
-        {clips.map((clip) => {
-          const isSelected = clip.id === selectedClipId;
-
-          return (
-            <Box key={clip.id} sx={{ position: 'relative', width: 96, flex: '0 0 auto' }}>
-              <Box
-                onClick={() => ui.setSelectedClipId(clip.id)}
-                sx={{
-                  borderRadius: 2,
-                  p: 1,
-                  bgcolor: 'rgba(15,23,42,0.75)',
-                  border: `1px solid ${isSelected ? '#6366f1' : 'rgba(148,163,184,0.18)'}`,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
+            return (
+              <Box key={clip.id} sx={{ position: 'relative', width: 116, flex: '0 0 auto' }}>
                 <Box
+                  onClick={() => ui.setSelectedClipId(clip.id)}
                   sx={{
-                    width: '100%',
-                    height: 54,
-                    borderRadius: 1.5,
-                    bgcolor: '#0b1220',
-                    mb: 0.5,
-                    border: '1px solid #0f172a',
+                    borderRadius: 2,
+                    p: 1,
+                    bgcolor: 'rgba(15,23,42,0.75)',
+                    border: `1px solid ${isSelected ? '#6366f1' : 'rgba(148,163,184,0.18)'}`,
+                    cursor: 'pointer',
+                    userSelect: 'none',
                   }}
-                />
-                <Typography
-                  sx={{
-                    color: isSelected ? '#c7d2fe' : '#e5e7eb',
-                    fontSize: 11,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                  title={clip.label ?? clip.id}
                 >
-                  {clip.label ?? clip.id}
-                </Typography>
-                <Typography sx={{ color: '#9ca3af', fontSize: 10, mt: 0.25 }}>
-                  {formatTime(clip.start)}–{formatTime(clip.end)}
-                </Typography>
-              </Box>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                    <Typography sx={{ color: '#A5B4FC', fontSize: 10, fontWeight: 900 }}>
+                      #{clip.order + 1}
+                    </Typography>
+                    <Stack direction="row" spacing={0.25}>
+                      <Button
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDraftClips((current) => moveClip(current, clip.id, -1));
+                        }}
+                        sx={{ minWidth: 24, p: 0.3, color: '#CBD5E1' }}
+                        title="Move earlier"
+                      >
+                        <NorthRoundedIcon fontSize="inherit" />
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDraftClips((current) => moveClip(current, clip.id, 1));
+                        }}
+                        sx={{ minWidth: 24, p: 0.3, color: '#CBD5E1' }}
+                        title="Move later"
+                      >
+                        <SouthRoundedIcon fontSize="inherit" />
+                      </Button>
+                    </Stack>
+                  </Stack>
 
-              {/* delete */}
-              <Box
-                onClick={() => handleRemoveClip(clip.id)}
-                sx={{
-                  position: 'absolute',
-                  top: 6,
-                  right: 6,
-                  width: 18,
-                  height: 18,
-                  borderRadius: 999,
-                  bgcolor: 'rgba(0,0,0,0.7)',
-                  color: '#f9fafb',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: 12,
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-                title="Remove clip"
-              >
-                ×
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: 54,
+                      borderRadius: 1.5,
+                      bgcolor: '#0b1220',
+                      mb: 0.5,
+                      border: '1px solid #0f172a',
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      color: isSelected ? '#c7d2fe' : '#e5e7eb',
+                      fontSize: 11,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                    title={clip.label ?? clip.id}
+                  >
+                    {clip.label ?? clip.id}
+                  </Typography>
+                  <Typography sx={{ color: '#9ca3af', fontSize: 10, mt: 0.25 }}>
+                    {formatTime(clip.start)}-{formatTime(clip.end)}
+                  </Typography>
+                </Box>
+
+                <Box
+                  onClick={() => handleRemoveClip(clip.id)}
+                  sx={{
+                    position: 'absolute',
+                    top: 6,
+                    right: 6,
+                    width: 18,
+                    height: 18,
+                    borderRadius: 999,
+                    bgcolor: 'rgba(0,0,0,0.7)',
+                    color: '#f9fafb',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                  title="Remove clip"
+                >
+                  x
+                </Box>
               </Box>
-            </Box>
-          );
-        })}
-      </Box>
-    </Box>
+            );
+          })}
+        </Box>
+
+        {ui.trimVisible && selectedClip && (
+          <Paper
+            elevation={0}
+            sx={{
+              borderRadius: 2,
+              border: '1px solid rgba(148,163,184,0.22)',
+              bgcolor: 'rgba(15,23,42,0.65)',
+              p: 1.1,
+            }}
+          >
+            <Stack spacing={0.9}>
+              <Typography sx={{ color: '#E2E8F0', fontSize: 12, fontWeight: 900 }}>
+                Trim: {selectedClip.label ?? selectedClip.id}
+              </Typography>
+
+              <Typography sx={{ color: 'rgba(148,163,184,0.8)', fontSize: 11, fontWeight: 700 }}>
+                In point: {formatTime(selectedClip.start)}
+              </Typography>
+              <Slider
+                min={0}
+                max={Math.max(selectedClip.end - MIN_CLIP_SPAN_SECONDS, 0)}
+                step={0.05}
+                value={selectedClip.start}
+                onChange={(_, value) => updateDraftTrim(selectedClip.id, 'start', value as number)}
+                sx={{ color: '#818CF8' }}
+              />
+
+              <Typography sx={{ color: 'rgba(148,163,184,0.8)', fontSize: 11, fontWeight: 700 }}>
+                Out point: {formatTime(selectedClip.end)}
+              </Typography>
+              <Slider
+                min={selectedClip.start + MIN_CLIP_SPAN_SECONDS}
+                max={Math.max(sourceDurationForClip(selectedClip), selectedClip.start + MIN_CLIP_SPAN_SECONDS)}
+                step={0.05}
+                value={selectedClip.end}
+                onChange={(_, value) => updateDraftTrim(selectedClip.id, 'end', value as number)}
+                sx={{ color: '#22C55E' }}
+              />
+
+              <Typography sx={{ color: 'rgba(148,163,184,0.72)', fontSize: 11 }}>
+                Preview and export use committed trim points.
+              </Typography>
+
+              <Button
+                variant="contained"
+                size="small"
+                disabled={!trimDirty}
+                onClick={applyTrimEdits}
+                sx={{
+                  alignSelf: 'flex-start',
+                  borderRadius: 999,
+                  textTransform: 'none',
+                  fontWeight: 900,
+                  bgcolor: '#4F46E5',
+                  '&:hover': { bgcolor: '#4338CA' },
+                }}
+              >
+                Commit Trim
+              </Button>
+            </Stack>
+          </Paper>
+        )}
+
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            border: '1px solid rgba(148,163,184,0.22)',
+            bgcolor: 'rgba(15,23,42,0.65)',
+            p: 1.1,
+          }}
+        >
+          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <SwapHorizRoundedIcon sx={{ color: '#A5B4FC', fontSize: 16 }} />
+              <Typography sx={{ color: '#E2E8F0', fontSize: 12, fontWeight: 900 }}>
+                Stitch Sequence
+              </Typography>
+            </Stack>
+
+            <Button
+              variant="contained"
+              size="small"
+              disabled={!orderDirty}
+              onClick={applySequenceEdits}
+              sx={{
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 900,
+                bgcolor: '#0EA5E9',
+                '&:hover': { bgcolor: '#0284C7' },
+              }}
+            >
+              Apply Stitch Order
+            </Button>
+          </Stack>
+
+          <Typography sx={{ color: 'rgba(148,163,184,0.72)', fontSize: 11, mt: 0.75 }}>
+            Use arrows on each clip card to reorder. Export uses this exact committed order.
+          </Typography>
+        </Paper>
+      </Stack>
+    </Paper>
   );
 }

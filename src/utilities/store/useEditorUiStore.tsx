@@ -71,10 +71,12 @@ export type EditorUiState = {
 
   /** UI layout / view mode */
   trimVisible: boolean;
+  timelineDraftDirty: boolean;
   isExpandedPreview: boolean;
   timelineWidth: number;
 
   setTrimVisible: (v: boolean) => void;
+  setTimelineDraftDirty: (v: boolean) => void;
   setIsExpandedPreview: (v: boolean) => void;
   setTimelineWidth: (w: number) => void;
 
@@ -169,10 +171,12 @@ export const useEditorUiStore = create<EditorUiState>()((set) => ({
 
   // ---- Layout ----
   trimVisible: false,
+  timelineDraftDirty: false,
   isExpandedPreview: false,
   timelineWidth: 0,
 
   setTrimVisible: (trimVisible) => set({ trimVisible }),
+  setTimelineDraftDirty: (timelineDraftDirty) => set({ timelineDraftDirty }),
   setIsExpandedPreview: (isExpandedPreview) => set({ isExpandedPreview }),
   setTimelineWidth: (timelineWidth) => set({ timelineWidth }),
 
