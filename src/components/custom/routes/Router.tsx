@@ -7,9 +7,11 @@ import {
 } from "react-router";
 import Providers from "@components/custom/providers/Providers";
 import BasicNavbar from '@components/custom/ReusableNavbar/BasicNavbar';
-import { Container, Typography, Box } from "@mui/material";
+import { Box, useMediaQuery } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import SettingsPage, { ProfileContent } from "@components/pages/SettingsPage";
 import StudioHomePage, { tabToRoute } from "@components/pages/StudioHomePage";
+import type { TabKey } from "@components/pages/StudioHomePage";
 import AuthPage from "@components/Auth/AuthPage";
 import { useEffect, useState } from "react";
 import { useSupabaseStore } from "@store/supabaseStore";
@@ -86,8 +88,17 @@ const routes = [
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  console.log("Current location: ", location)
+  const isDesktop = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
   const isStudioPage = location.pathname.includes("editor") || location.pathname.includes("image");
+  const activeTab: TabKey = (() => {
+    const p = location.pathname;
+    if (p.startsWith("/feed")) return "feed";
+    if (p.startsWith("/profile")) return "profile";
+    if (p.startsWith("/settings")) return "settings";
+    if (p.startsWith("/image")) return "image";
+    if (p.startsWith("/editor")) return "editor";
+    return "studio";
+  })();
 
   const session = useSupabaseStore((s) => s.session);
   const setSession = useSupabaseStore((s) => s.setSession);
@@ -137,10 +148,10 @@ export default function Layout() {
           <main>
             <BasicNavbar />
             <Box sx={{ mt: 10 }}>
-              <Outlet />
-                {!isStudioPage && (
+                <Outlet />
+                {!isDesktop && !isStudioPage && (
                     <BottomDock 
-                        active="studio" 
+                        active={activeTab}
                         onSelect={(t) => navigate(tabToRoute(t))} 
                     />
                 )}

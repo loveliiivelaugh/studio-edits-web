@@ -333,18 +333,18 @@
 import React from "react";
 import { Button, Chip, Container, Typography, Box } from "@mui/material";
 import { IconButton, Paper, Stack } from "@mui/material";
+import { useMediaQuery } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router";
 import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
-import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
-import VideocamOutlinedIcon from "@mui/icons-material/VideocamOutlined";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 
 import { useStudioStore } from "@store/useStudioStore";
 
-type TabKey = "studio" | "image" | "editor" | "feed" | "profile" | "settings";
+export type TabKey = "studio" | "image" | "editor" | "feed" | "profile" | "settings";
 
 export function StudioHomePage() {
   const nav = useNavigate();
@@ -352,6 +352,7 @@ export function StudioHomePage() {
 
   const projects = useStudioStore((s) => s.projects);
   const createProject = useStudioStore((s) => s.createProject);
+  const isDesktop = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
 
   // If you have real sync later, wire it here. For now: local = "synced".
   const isSynced = true;
@@ -422,194 +423,226 @@ export function StudioHomePage() {
       />
 
       <Container
-        maxWidth="sm"
+        maxWidth={false}
         sx={{
-          pt: 2,
-          pb: 12,
+          width: "100%",
+          maxWidth: 1440,
+          pt: isDesktop ? 3 : 2,
+          pb: isDesktop ? 3 : 12,
           position: "relative",
         }}
       >
-        {/* Top bar */}
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{ mb: 2 }}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: isDesktop ? "minmax(360px, 460px) minmax(0, 1fr)" : "1fr",
+            gap: 2.25,
+            alignItems: "start",
+          }}
         >
-          <Stack direction="row" alignItems="center" gap={1.25}>
-            <Typography
-              sx={{ fontWeight: 900, fontSize: 18, letterSpacing: 0.2 }}
+          <Box>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ mb: 2 }}
             >
-              Studio Editor 🏀⛹️
+              <Stack direction="row" alignItems="center" gap={1.25}>
+                <Typography
+                  sx={{ fontWeight: 900, fontSize: 18, letterSpacing: 0.2 }}
+                >
+                  Studio Editor 🏀⛹️
+                </Typography>
+
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 999,
+                    bgcolor: isSynced ? "#22c55e" : "#f59e0b",
+                    boxShadow: isSynced
+                      ? "0 0 0 3px rgba(34,197,94,0.15)"
+                      : "0 0 0 3px rgba(245,158,11,0.15)",
+                  }}
+                  aria-label={isSynced ? "synced" : "not synced"}
+                />
+              </Stack>
+
+              <Button
+                onClick={handleSyncNow}
+                component={motion.button}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                variant="contained"
+                sx={{
+                  borderRadius: 999,
+                  textTransform: "none",
+                  fontWeight: 800,
+                  bgcolor: "#4F46E5",
+                  px: 2,
+                  py: 0.8,
+                  "&:hover": { bgcolor: "#4338CA" },
+                }}
+              >
+                Sync now
+              </Button>
+            </Stack>
+
+            <Typography
+              sx={{ color: "rgba(148,163,184,0.85)", mb: 2, fontSize: 13 }}
+            >
+              Make something cool today
             </Typography>
 
-            <Box
-              sx={{
-                width: 10,
-                height: 10,
-                borderRadius: 999,
-                bgcolor: isSynced ? "#22c55e" : "#f59e0b",
-                boxShadow: isSynced
-                  ? "0 0 0 3px rgba(34,197,94,0.15)"
-                  : "0 0 0 3px rgba(245,158,11,0.15)",
-              }}
-              aria-label={isSynced ? "synced" : "not synced"}
-            />
-          </Stack>
+            <Stack gap={1.25} sx={{ mb: 2.25 }}>
+              <ActionPill label="New Video Project" onClick={handleNewVideoProject} />
+              <ActionPill label="New Image Project" onClick={handleNewImageProject} />
+            </Stack>
 
-          <Button
-            onClick={handleSyncNow}
-            component={motion.button}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            variant="contained"
-            sx={{
-              borderRadius: 999,
-              textTransform: "none",
-              fontWeight: 800,
-              bgcolor: "#4F46E5",
-              px: 2,
-              py: 0.8,
-              "&:hover": { bgcolor: "#4338CA" },
-            }}
-          >
-            Sync now
-          </Button>
-        </Stack>
-
-        <Typography
-          sx={{ color: "rgba(148,163,184,0.85)", mb: 2, fontSize: 13 }}
-        >
-          Make something cool today
-        </Typography>
-
-        {/* Actions */}
-        <Stack gap={1.25} sx={{ mb: 2.25 }}>
-          <ActionPill label="New Video Project" onClick={handleNewVideoProject} />
-          <ActionPill label="New Image Project" onClick={handleNewImageProject} />
-        </Stack>
-
-        {/* Projects list */}
-        <Stack gap={1.25}>
-          {ordered.length === 0 ? (
-            <Paper
-              elevation={0}
-              sx={{
-                borderRadius: 3,
-                border: "1px solid rgba(148,163,184,0.18)",
-                background: "rgba(2,6,23,0.65)",
-                backdropFilter: "blur(10px)",
-                p: 2,
-              }}
-            >
-              <Typography sx={{ fontWeight: 900, mb: 0.5 }}>
-                No projects yet
-              </Typography>
-              <Typography sx={{ color: "rgba(148,163,184,0.75)", fontSize: 13 }}>
-                Create a new project to start editing.
-              </Typography>
-            </Paper>
-          ) : (
-            ordered.map((p) => {
-              const clipCount = p.clips?.length ?? 0;
-              const kind = clipCount > 0 ? "Video" : "Project";
-
-              const edited = (() => {
-                try {
-                  const d = new Date(p.updatedAt);
-                  return d.toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  });
-                } catch {
-                  return "—";
-                }
-              })();
-
-              return (
+            <Stack gap={1.25}>
+              {ordered.length === 0 ? (
                 <Paper
-                  key={p.id}
-                  component={motion.div}
-                  initial={{ y: 12, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
                   elevation={0}
-                  onClick={() => handleOpenProject(p.id)}
                   sx={{
-                    cursor: "pointer",
                     borderRadius: 3,
                     border: "1px solid rgba(148,163,184,0.18)",
                     background: "rgba(2,6,23,0.65)",
                     backdropFilter: "blur(10px)",
-                    overflow: "hidden",
-                    px: 1.25,
-                    py: 1.1,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.25,
-                    "&:hover": {
-                      borderColor: "rgba(129,140,248,0.55)",
-                      background: "rgba(2,6,23,0.78)",
-                    },
+                    p: 2,
                   }}
                 >
-                  <Box
-                    sx={{
-                      width: 54,
-                      height: 38,
-                      borderRadius: 2,
-                      display: "grid",
-                      placeItems: "center",
-                      background:
-                        "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(15,23,42,0.70))",
-                      border: "1px solid rgba(148,163,184,0.14)",
-                    }}
-                  >
-                    <Typography sx={{ fontSize: 20, opacity: 0.95 }}>
-                      🎬
-                    </Typography>
-                  </Box>
-
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography
-                      sx={{
-                        fontWeight: 900,
-                        fontSize: 14,
-                        lineHeight: 1.2,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                      title={p.name}
-                    >
-                      {p.name}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        color: "rgba(148,163,184,0.75)",
-                        fontSize: 12,
-                        mt: 0.3,
-                      }}
-                    >
-                      Edited {edited} · {clipCount} clips
-                    </Typography>
-                  </Box>
-
-                  <Chip
-                    size="small"
-                    label={kind}
-                    sx={{
-                      bgcolor: "rgba(79,70,229,0.16)",
-                      color: "#C7D2FE",
-                      border: "1px solid rgba(129,140,248,0.28)",
-                      fontWeight: 800,
-                    }}
-                  />
+                  <Typography sx={{ fontWeight: 900, mb: 0.5 }}>
+                    No projects yet
+                  </Typography>
+                  <Typography sx={{ color: "rgba(148,163,184,0.75)", fontSize: 13 }}>
+                    Create a new project to start editing.
+                  </Typography>
                 </Paper>
-              );
-            })
+              ) : (
+                ordered.map((p) => {
+                  const clipCount = p.clips?.length ?? 0;
+                  const kind = clipCount > 0 ? "Video" : "Project";
+
+                  const edited = (() => {
+                    try {
+                      const d = new Date(p.updatedAt);
+                      return d.toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      });
+                    } catch {
+                      return "—";
+                    }
+                  })();
+
+                  return (
+                    <Paper
+                      key={p.id}
+                      component={motion.div}
+                      initial={{ y: 12, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      elevation={0}
+                      onClick={() => handleOpenProject(p.id)}
+                      sx={{
+                        cursor: "pointer",
+                        borderRadius: 3,
+                        border: "1px solid rgba(148,163,184,0.18)",
+                        background: "rgba(2,6,23,0.65)",
+                        backdropFilter: "blur(10px)",
+                        overflow: "hidden",
+                        px: 1.25,
+                        py: 1.1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.25,
+                        "&:hover": {
+                          borderColor: "rgba(129,140,248,0.55)",
+                          background: "rgba(2,6,23,0.78)",
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 54,
+                          height: 38,
+                          borderRadius: 2,
+                          display: "grid",
+                          placeItems: "center",
+                          background:
+                            "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(15,23,42,0.70))",
+                          border: "1px solid rgba(148,163,184,0.14)",
+                        }}
+                      >
+                        <Typography sx={{ fontSize: 20, opacity: 0.95 }}>
+                          🎬
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 900,
+                            fontSize: 14,
+                            lineHeight: 1.2,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                          title={p.name}
+                        >
+                          {p.name}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            color: "rgba(148,163,184,0.75)",
+                            fontSize: 12,
+                            mt: 0.3,
+                          }}
+                        >
+                          Edited {edited} · {clipCount} clips
+                        </Typography>
+                      </Box>
+
+                      <Chip
+                        size="small"
+                        label={kind}
+                        sx={{
+                          bgcolor: "rgba(79,70,229,0.16)",
+                          color: "#C7D2FE",
+                          border: "1px solid rgba(129,140,248,0.28)",
+                          fontWeight: 800,
+                        }}
+                      />
+                    </Paper>
+                  );
+                })
+              )}
+            </Stack>
+          </Box>
+
+          {isDesktop && (
+            <Paper
+              elevation={0}
+              sx={{
+                minHeight: 520,
+                borderRadius: 4,
+                border: "1px solid rgba(148,163,184,0.18)",
+                background:
+                  "linear-gradient(180deg, rgba(2,6,23,0.44), rgba(2,6,23,0.70))",
+                backdropFilter: "blur(10px)",
+                p: 3,
+              }}
+            >
+              <Typography sx={{ color: "#E5E7EB", fontSize: 28, fontWeight: 900 }}>
+                Desktop Workspace
+              </Typography>
+              <Typography sx={{ mt: 1.25, color: "rgba(148,163,184,0.85)", fontSize: 14 }}>
+                Use the left column to create and open projects. This desktop pane keeps web layout balanced instead of collapsing into a mobile-width stack.
+              </Typography>
+            </Paper>
           )}
-        </Stack>
+        </Box>
       </Container>
 
       <BottomDock
@@ -656,6 +689,7 @@ function BottomDock({
   active: TabKey;
   onSelect: (t: TabKey) => void;
 }) {
+  const isDesktop = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
   const items: { key: TabKey; icon: React.ReactNode; label: string }[] = [
     { key: "studio", icon: <CameraAltOutlinedIcon fontSize="small" />, label: "Studio" },
     // { key: "image", icon: <ImageOutlinedIcon fontSize="small" />, label: "Image" },
@@ -664,6 +698,8 @@ function BottomDock({
     { key: "profile", icon: <PersonOutlineOutlinedIcon fontSize="small" />, label: "Profile" },
     { key: "settings", icon: <SettingsOutlinedIcon fontSize="small" />, label: "Settings" },
   ];
+
+  if (isDesktop) return null;
 
   return (
     <Box
