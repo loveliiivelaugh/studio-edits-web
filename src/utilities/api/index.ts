@@ -2,23 +2,70 @@ import axios from "axios";
 import apiConfig from "./api.config.json";
 import { supabase } from "./supabase";
 
-// creds
-const isDev = (import.meta.env.MODE === "development");
-apiConfig.host.baseURL = isDev ? import.meta.env.VITE_DEV_HOSTNAME : import.meta.env.VITE_HOSTNAME;
-apiConfig.host.headers.Authorization = "Bearer " + import.meta.env.VITE_MASTER_API_KEY;
+const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
+const trimSlashes = (value = "") => value.replace(/^\/+|\/+$/g, "");
 
-const client = axios.create(apiConfig.host);
-const graphqlClient = axios.create(apiConfig.host);
+const joinUrl = (base: string, path: string) => {
+    const root = trimTrailingSlash(base);
+    const normalizedPath = trimSlashes(path);
+    if (!root) return normalizedPath ? `/${normalizedPath}` : "";
+    if (!normalizedPath) return root;
+    return `${root}/${normalizedPath}`;
+};
+
+const isDev = import.meta.env.MODE === "development";
+const hostFromEnv = trimTrailingSlash(import.meta.env.VITE_HOSTNAME || "");
+const devHostFromEnv = trimTrailingSlash(import.meta.env.VITE_DEV_HOSTNAME || "");
+const rootHost = isDev ? (devHostFromEnv || hostFromEnv) : (hostFromEnv || devHostFromEnv);
+
+const explicitOpenStudioBase = trimTrailingSlash(import.meta.env.VITE_OPENSTUDIO_API_BASE || "");
+const openstudioBase = explicitOpenStudioBase
+    ? explicitOpenStudioBase
+    : rootHost.endsWith("/api/v1/openstudio")
+        ? rootHost
+        : joinUrl(rootHost, "/api/v1/openstudio");
+
+const explicitBurstyBase = trimTrailingSlash(import.meta.env.VITE_BURSTY_BASE || "");
+const burstyBase = explicitBurstyBase
+    ? explicitBurstyBase
+    : rootHost
+        ? joinUrl(rootHost, "/woodward-studio/bursty")
+        : "";
+
+const baseHeaders = { ...apiConfig.host.headers };
+if (import.meta.env.VITE_MASTER_API_KEY) {
+    baseHeaders.Authorization = `Bearer ${import.meta.env.VITE_MASTER_API_KEY}`;
+}
+
+const baseHostConfig = {
+    ...apiConfig.host,
+    headers: baseHeaders,
+    baseURL: rootHost,
+};
+
+const client = axios.create(baseHostConfig);
+const openstudioClient = axios.create({
+    ...baseHostConfig,
+    baseURL: openstudioBase,
+});
+const burstyClient = axios.create({
+    ...baseHostConfig,
+    baseURL: burstyBase,
+});
+const graphqlClient = axios.create(baseHostConfig);
+
+const apiBases = {
+    rootHost,
+    openstudioBase,
+    burstyBase,
+};
 
 type PayloadTypes = {
-    QueryPayload: {
-        [propertyKey: string]: any
-    }
-    MutatePayload: {
+    QueryPayload: Record<string, unknown>;
+    MutatePayload: Record<string, unknown> & {
         options?: {
             debounce?: number
         }
-        [propertyKey: string]: any
     }
 };
 
@@ -32,10 +79,11 @@ type SupabaseQueryOptions = {
     }
 };
 
-type DebounceType = (...args: any) => any;
-const debounce: DebounceType = (fn, ms) => setTimeout(() => fn(), ms);
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const queryPathCallback: (queryPath: any) => string = (queryPath: any) => {
+type QueryPath = string | ((paths: typeof apiConfig.paths) => string);
+
+const queryPathCallback = (queryPath: QueryPath): string => {
     if (typeof queryPath === "function") return queryPath(apiConfig.paths);
     return queryPath;
 };
@@ -48,20 +96,30 @@ const queries = ({
      * @param {string} [method] HTTP method to use, defaults to "get"
      * @returns {import("react-query").UseQueryOptions} An object suitable for use with the `useQuery` hook
      */
-    query: (queryPath: any, payload?: PayloadTypes["QueryPayload"], method?: string) => ({
+    query: (queryPath: QueryPath, payload?: PayloadTypes["QueryPayload"], method?: string) => ({
         queryKey: [queryPath],
-        queryFn: async () => payload 
-            ? (await (client as any)[method || "post"](queryPathCallback(queryPath), payload)).data
-            : (await (client as any)[method || "get"](queryPathCallback(queryPath))).data,
+        queryFn: async () => {
+            const normalizedMethod = (method || (payload ? "post" : "get")).toLowerCase();
+            const response = await client.request({
+                method: normalizedMethod,
+                url: queryPathCallback(queryPath),
+                ...(payload ? { data: payload } : {}),
+            });
+            return response.data;
+        },
         options: {
             retries: 2
         }
     }),
-    mutate: (queryPath: any) => ({
+    mutate: (queryPath: QueryPath) => ({
         mutationKey: [queryPath],
-        mutationFn: async (payload?: PayloadTypes["MutatePayload"]) => payload?.options?.debounce
-            ? (await debounce(client.post(queryPathCallback(queryPath), payload), payload.options.debounce)).data
-            : (await client.post(queryPathCallback(queryPath), payload)).data,
+        mutationFn: async (payload?: PayloadTypes["MutatePayload"]) => {
+            if (payload?.options?.debounce) {
+                await delay(payload.options.debounce);
+            }
+            const response = await client.post(queryPathCallback(queryPath), payload);
+            return response.data;
+        },
         options: {
             retries: 2
         }
@@ -76,7 +134,7 @@ const queries = ({
     }),
     supabaseMutation: (options: SupabaseQueryOptions) => ({
         mutationKey: [`supabase-mutate-${options.table}`],
-        mutationFn: async (payload: any) => {
+        mutationFn: async (payload: Record<string, unknown> & { table?: string; operation?: string }) => {
             const table = payload?.table;
             const operation = payload?.operation;
 
@@ -89,10 +147,17 @@ const queries = ({
             //     return item;
             // });
 
-            // @ts-ignore
-            return await supabase
-                .from(table || options.table)[operation || "insert"](payload)
-                .select();
+            const query = supabase.from(table || options.table);
+            switch (operation || "insert") {
+                case "upsert":
+                    return await query.upsert(payload).select();
+                case "update":
+                    return await query.update(payload).select();
+                case "delete":
+                    return await query.delete().select();
+                default:
+                    return await query.insert(payload).select();
+            }
         }
     }),
     /**
@@ -107,4 +172,4 @@ const queries = ({
 });
 
 const paths = apiConfig.paths;
-export { client, paths, queries };
+export { client, openstudioClient, burstyClient, apiBases, paths, queries };
