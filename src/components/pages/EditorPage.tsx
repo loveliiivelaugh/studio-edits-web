@@ -427,7 +427,6 @@ import {
   Stack,
   Typography,
   useMediaQuery,
-  Theme,
   Tooltip,
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -624,7 +623,7 @@ export default function EditorPage() {
   );
 
   const ui = useEditorUiStore();
-  const isLandscape = useMediaQuery((t: Theme) => t.breakpoints.up('md'));
+  const isLandscape = useMediaQuery('(min-width:900px)');
 
   React.useEffect(() => {
     ui.setSelectedProjectId(projectId);

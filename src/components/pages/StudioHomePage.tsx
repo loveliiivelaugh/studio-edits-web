@@ -334,7 +334,6 @@ import React from "react";
 import { Button, Chip, Container, Typography, Box } from "@mui/material";
 import { IconButton, Paper, Stack } from "@mui/material";
 import { useMediaQuery } from "@mui/material";
-import type { Theme } from "@mui/material/styles";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router";
 import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
@@ -352,7 +351,7 @@ export function StudioHomePage() {
 
   const projects = useStudioStore((s) => s.projects);
   const createProject = useStudioStore((s) => s.createProject);
-  const isDesktop = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
+  const isDesktop = useMediaQuery("(min-width:900px)");
 
   // If you have real sync later, wire it here. For now: local = "synced".
   const isSynced = true;
@@ -689,7 +688,7 @@ function BottomDock({
   active: TabKey;
   onSelect: (t: TabKey) => void;
 }) {
-  const isDesktop = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
+  const isDesktop = useMediaQuery("(min-width:900px)");
   const items: { key: TabKey; icon: React.ReactNode; label: string }[] = [
     { key: "studio", icon: <CameraAltOutlinedIcon fontSize="small" />, label: "Studio" },
     // { key: "image", icon: <ImageOutlinedIcon fontSize="small" />, label: "Image" },

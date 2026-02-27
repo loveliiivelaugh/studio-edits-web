@@ -8,7 +8,6 @@ import {
 import Providers from "@components/custom/providers/Providers";
 import BasicNavbar from '@components/custom/ReusableNavbar/BasicNavbar';
 import { Box, useMediaQuery } from "@mui/material";
-import type { Theme } from "@mui/material/styles";
 import SettingsPage, { ProfileContent } from "@components/pages/SettingsPage";
 import StudioHomePage, { tabToRoute } from "@components/pages/StudioHomePage";
 import type { TabKey } from "@components/pages/StudioHomePage";
@@ -88,7 +87,7 @@ const routes = [
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isDesktop = useMediaQuery((theme: Theme) => theme.breakpoints.up("md"));
+  const isDesktop = useMediaQuery("(min-width:900px)");
   const isStudioPage = location.pathname.includes("editor") || location.pathname.includes("image");
   const activeTab: TabKey = (() => {
     const p = location.pathname;
