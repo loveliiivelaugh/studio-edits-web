@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { client } from '@api/index'; // adjust path to your axios client
+import { openstudioClient } from '@api/index';
 import { unmaskUrl } from '@store/useSmartEdit'; // adjust path
 import type { BusyReason } from '@store/useEditorUiStore';
 import type { Project } from '@store/useStudioStore';
@@ -42,6 +42,45 @@ async function copyToClipboard(text: string) {
   ta.remove();
 }
 
+type ExportStatus = 'idle' | 'loading' | 'success' | 'failure';
+type ShareNavigator = Navigator & {
+  share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
+};
+
+function normalizeProjectForExport(project: Project): Project {
+  const clips = (project?.clips ?? [])
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((clip, index) => {
+      const start = Math.max(0, clip.start ?? 0);
+      const end = Math.max(start + 0.05, clip.end ?? start + 0.05);
+      return {
+        ...clip,
+        start,
+        end,
+        order: index,
+      };
+    });
+
+  return {
+    ...project,
+    clips,
+  };
+}
+
+function getErrorMessage(error: unknown) {
+  if (typeof error === 'object' && error) {
+    const typed = error as {
+      response?: { data?: { error?: string; message?: string } };
+      message?: string;
+    };
+    return typed.response?.data?.error || typed.response?.data?.message || typed.message || 'Export failed.';
+  }
+  return (
+    'Export failed.'
+  );
+}
+
 export default function EditorExportPanel({
   project,
   ui,
@@ -49,6 +88,7 @@ export default function EditorExportPanel({
   project: Project;
   ui: {
     isExporting: boolean;
+    timelineDraftDirty?: boolean;
     setIsExporting: (v: boolean) => void;
     setBusyReason: (v: BusyReason) => void;
   };
@@ -57,8 +97,9 @@ export default function EditorExportPanel({
 
   const [lastExportUrl, setLastExportUrl] = React.useState<string | null>(null);
   const [msg, setMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [exportStatus, setExportStatus] = React.useState<ExportStatus>('idle');
 
-  const canExport = Boolean(project?.clips?.length);
+  const canExport = Boolean(project?.clips?.length) && !ui.timelineDraftDirty;
 
   const handleExport = React.useCallback(async () => {
     setMsg(null);
@@ -69,24 +110,26 @@ export default function EditorExportPanel({
     }
 
     try {
+      setExportStatus('loading');
       ui.setBusyReason('export');
       setIsExporting(true);
 
-      // 1) Ask backend to export
-      const res = await client.post('/api/v1/openstudio/export', { project });
+      const exportProject = normalizeProjectForExport(project);
+      const res = await openstudioClient.post('/export', { project: exportProject });
       const url: string = unmaskUrl(res.data?.url);
 
       if (!url) throw new Error('No URL returned from export.');
 
       setLastExportUrl(url);
+      setExportStatus('success');
 
-      // 2) Download (best UX: immediate)
       downloadUrl(url, `openstudio_export_${Date.now()}.mp4`);
 
       setMsg({ type: 'success', text: 'Export started. Download should begin shortly.' });
-    } catch (e: any) {
-      console.error('[ExportWeb] Export failed', e);
-      setMsg({ type: 'error', text: e?.message ?? 'Export failed.' });
+    } catch (error: unknown) {
+      console.error('[ExportWeb] Export failed', error);
+      setExportStatus('failure');
+      setMsg({ type: 'error', text: `${getErrorMessage(error)} Retry after checking your clips and network.` });
     } finally {
       setIsExporting(false);
       ui.setBusyReason('none');
@@ -101,12 +144,9 @@ export default function EditorExportPanel({
     }
 
     try {
-      // If running as mobile PWA, Web Share API may exist
-      // (note: sharing files is more complex; sharing URL is reliable)
-      // @ts-ignore
-      if (navigator.share) {
-        // @ts-ignore
-        await navigator.share({
+      const shareNavigator = navigator as ShareNavigator;
+      if (shareNavigator.share) {
+        await shareNavigator.share({
           title: 'OpenStudio export',
           text: 'Check out my OpenStudio export',
           url: lastExportUrl,
@@ -117,9 +157,9 @@ export default function EditorExportPanel({
 
       await copyToClipboard(lastExportUrl);
       setMsg({ type: 'success', text: 'Link copied to clipboard.' });
-    } catch (e: any) {
-      console.error('[ExportWeb] Share failed', e);
-      setMsg({ type: 'error', text: e?.message ?? 'Share failed.' });
+    } catch (error: unknown) {
+      console.error('[ExportWeb] Share failed', error);
+      setMsg({ type: 'error', text: getErrorMessage(error) });
     }
   }, [lastExportUrl]);
 
@@ -129,8 +169,8 @@ export default function EditorExportPanel({
     try {
       await copyToClipboard(lastExportUrl);
       setMsg({ type: 'success', text: 'Link copied to clipboard.' });
-    } catch (e: any) {
-      setMsg({ type: 'error', text: e?.message ?? 'Copy failed.' });
+    } catch (error: unknown) {
+      setMsg({ type: 'error', text: getErrorMessage(error) });
     }
   }, [lastExportUrl]);
 
@@ -155,7 +195,7 @@ export default function EditorExportPanel({
             Export
           </Typography>
           <Typography sx={{ color: 'rgba(148,163,184,0.75)', fontSize: 12 }}>
-            Render your project into a single video and download it.
+            Render your committed trim + stitch sequence into a single video.
           </Typography>
         </Box>
 
@@ -173,6 +213,16 @@ export default function EditorExportPanel({
             {msg.text}
           </Alert>
         )}
+
+        <Typography sx={{ color: 'rgba(148,163,184,0.75)', fontSize: 11 }}>
+          Status:{' '}
+          <Box component="span" sx={{ color: '#E2E8F0', fontWeight: 800 }}>
+            {exportStatus === 'idle' && 'Idle'}
+            {exportStatus === 'loading' && 'Exporting'}
+            {exportStatus === 'success' && 'Success'}
+            {exportStatus === 'failure' && 'Failed'}
+          </Box>
+        </Typography>
 
         <Button
           component={motion.button}
@@ -207,6 +257,31 @@ export default function EditorExportPanel({
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
           <Button
+            component="a"
+            href={lastExportUrl ?? undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            disabled={!lastExportUrl || isExporting}
+            variant="outlined"
+            sx={{
+              flex: 1,
+              borderRadius: 999,
+              textTransform: 'none',
+              fontWeight: 900,
+              borderColor: 'rgba(148,163,184,0.28)',
+              color: '#E5E7EB',
+              bgcolor: 'rgba(15,23,42,0.55)',
+              '&:hover': { borderColor: '#22C55E', bgcolor: 'rgba(30,41,59,0.75)' },
+              '&.Mui-disabled': {
+                opacity: 0.5,
+                borderColor: 'rgba(148,163,184,0.18)',
+              },
+            }}
+          >
+            Open Export
+          </Button>
+
+          <Button
             component={motion.button}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
@@ -228,7 +303,7 @@ export default function EditorExportPanel({
               },
             }}
           >
-            Share / Copy Link
+            Share Link
           </Button>
 
           <Button
@@ -264,9 +339,15 @@ export default function EditorExportPanel({
           }}
         />
 
-        {!canExport && (
+        {!project?.clips?.length && (
           <Typography sx={{ color: 'rgba(148,163,184,0.75)', fontSize: 12 }}>
             Add a clip to enable export.
+          </Typography>
+        )}
+
+        {ui.timelineDraftDirty && (
+          <Typography sx={{ color: '#FDE68A', fontSize: 12 }}>
+            Apply pending trim or stitch edits in Timeline before exporting.
           </Typography>
         )}
       </Stack>
