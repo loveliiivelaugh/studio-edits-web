@@ -127,6 +127,7 @@ export async function getVideoDurationSeconds(objectUrl: string): Promise<number
 
 export default function EditorTimelineWeb({ project }: { project: Project }) {
   const ui = useEditorUiStore();
+  const setTimelineDraftDirty = useEditorUiStore((state) => state.setTimelineDraftDirty);
   const updateProject = useStudioStore((state) => state.updateProject);
 
   const persistedClips = React.useMemo(() => sortAndReindex(project?.clips ?? []), [project?.clips]);
@@ -161,11 +162,11 @@ export default function EditorTimelineWeb({ project }: { project: Project }) {
   }, [draftClips, persistedClips]);
 
   React.useEffect(() => {
-    ui.setTimelineDraftDirty(hasPendingEdits);
+    setTimelineDraftDirty(hasPendingEdits);
     return () => {
-      ui.setTimelineDraftDirty(false);
+      setTimelineDraftDirty(false);
     };
-  }, [hasPendingEdits, ui]);
+  }, [hasPendingEdits, setTimelineDraftDirty]);
 
   const syncClipsToProject = React.useCallback(
     (nextClips: Clip[]) => {
