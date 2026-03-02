@@ -49,6 +49,7 @@ export type Clip = {
   remoteUri: string;
   start: number; // in seconds (source video space)
   end: number; // in seconds (source video space)
+  sourceDuration?: number; // full source duration in seconds before trim
   order: number;
 
   label?: string;

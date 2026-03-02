@@ -2,17 +2,32 @@
 import type { Project } from '@store/useStudioStore';
 import { useStudioStore } from '@store/useStudioStore';
 import { useState, useCallback } from 'react';
-import { client } from '@api/index';
+import { apiBases, openstudioClient } from '@api/index';
 import { useEditorUiStore } from '@store/useEditorUiStore';
 
 type Args = {
   project?: Project;
 };
 
-const MASK = "http://localhost:5051/media";
-const MASK2 = "http://localhost:5858/media";
-const ACTUAL = `${import.meta.env.EXPO_PUBLIC_DEV_API_BASE_URL}/api/v1/openstudio/media`;
-export const unmaskUrl = (url: string) => url.replace(MASK, ACTUAL).replace(MASK2, ACTUAL).replace("%2F", '/');
+const MASK = 'http://localhost:5051/media';
+const MASK2 = 'http://localhost:5858/media';
+
+const mediaBases = [
+  `${apiBases.rootHost}/media`,
+  `${apiBases.openstudioBase}/media`,
+  `${apiBases.burstyBase}/media`,
+].filter(Boolean);
+
+const ACTUAL = mediaBases[0] || '';
+
+export const unmaskUrl = (url: string) =>
+  ACTUAL
+    ? url
+        .replace(MASK, ACTUAL)
+        .replace(MASK2, ACTUAL)
+        .replace('http://localhost:3443/woodward-studio/bursty/media', ACTUAL)
+        .replace(/%2F/g, '/')
+    : url.replace(/%2F/g, '/');
 
 export function useSmartEdit({ project }: Args) {
   const [isSmartEditing, setIsSmartEditing] = useState(false);
@@ -27,7 +42,7 @@ export function useSmartEdit({ project }: Args) {
     setIsSmartEditing(true);
     setBusyReason('smart-edit'); // Global "loading" UI
     try {
-      const res = await client.post('/api/v1/openstudio/ai/smart-edit', {
+      const res = await openstudioClient.post('/ai/smart-edit', {
         project,
       });
 
@@ -39,8 +54,6 @@ export function useSmartEdit({ project }: Args) {
         previewUrl?: string;
         meta?: { appliedEffects?: string[]; notes?: string };
       };
-
-      console.log("Smart Edit Data: ", data, data.project.overlays, JSON.stringify(data, null, 2))
 
       if (data.project) {
         updateProject(project.id, () => data.project);
@@ -54,7 +67,7 @@ export function useSmartEdit({ project }: Args) {
       setIsSmartEditing(false);
       setBusyReason('none'); // Global "loading" UI
     }
-  }, [project, updateProject]);
+  }, [project, setBusyReason, updateProject]);
 
   return {
     isSmartEditing,

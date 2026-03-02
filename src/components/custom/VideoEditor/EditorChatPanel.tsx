@@ -12,8 +12,13 @@ import {
 } from '@mui/material';
 import { motion } from 'framer-motion';
 
-import { client } from '@api/index'; // adjust to your axios client
+import { openstudioClient } from '@api/index';
 import { useStudioStore } from '@store/useStudioStore';
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return 'Something went wrong applying AI edit.';
+}
 
 export default function EditorChatPanelWeb({ projectId }: { projectId: string }) {
   const project = useStudioStore((s) => s.projects.find((p) => p.id === projectId));
@@ -35,7 +40,7 @@ export default function EditorChatPanelWeb({ projectId }: { projectId: string })
       setError(null);
       setLastExplanation(null);
 
-      const res = await client.post('/api/v1/openstudio/ai/chat-edit', {
+      const res = await openstudioClient.post('/ai/chat-edit', {
         project,
         message: trimmed,
       });
@@ -51,9 +56,9 @@ export default function EditorChatPanelWeb({ projectId }: { projectId: string })
         data.explanation ?? 'Applied AI edit. (No explanation returned from backend.)'
       );
       setMessage('');
-    } catch (e: any) {
-      console.error('chat-edit failed', e);
-      const msg = e?.message ?? 'Something went wrong applying AI edit.';
+    } catch (error: unknown) {
+      console.error('chat-edit failed', error);
+      const msg = getErrorMessage(error);
       setError(msg);
       setLastExplanation(msg);
     } finally {

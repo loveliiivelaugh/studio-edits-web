@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { client } from '@api/index'; // adjust import to your axios client
+import { openstudioClient } from '@api/index';
 
 // --- API helpers ------------------------------------------------------------
 
@@ -43,17 +43,22 @@ type EditResponse = {
   model: string;
 };
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return 'Request failed.';
+}
+
 async function generateImage(payload: GeneratePayload): Promise<GenerateResponse> {
-  const response = await client.post<GenerateResponse>(
-    '/api/v1/openstudio/nano-banana/generate',
+  const response = await openstudioClient.post<GenerateResponse>(
+    '/nano-banana/generate',
     payload
   );
   return response.data;
 }
 
 async function editImage(payload: EditPayload): Promise<EditResponse> {
-  const response = await client.post<EditResponse>(
-    '/api/v1/openstudio/nano-banana/edit',
+  const response = await openstudioClient.post<EditResponse>(
+    '/nano-banana/edit',
     payload
   );
   return response.data;
@@ -70,12 +75,8 @@ const sizePresets = [
 ];
 
 export default function ImageEditorAiChatPanelWeb({
-  smartEdit,
-  ui,
   setPreviewUrl,
 }: {
-  smartEdit?: any;
-  ui?: any;
   setPreviewUrl: (url: string) => void;
 }) {
   const [tab, setTab] = React.useState<Tab>('generate');
@@ -133,9 +134,9 @@ export default function ImageEditorAiChatPanelWeb({
 
       // optional: auto-select newest for edit
       setSelectedForEdit(id);
-    } catch (e: any) {
-      console.error('[ImageEditor] generate failed', e);
-      setError(e?.message ?? 'Failed to generate image.');
+    } catch (error: unknown) {
+      console.error('[ImageEditor] generate failed', error);
+      setError(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -178,9 +179,9 @@ export default function ImageEditorAiChatPanelWeb({
         },
         ...prev,
       ]);
-    } catch (e: any) {
-      console.error('[ImageEditor] edit failed', e);
-      setError(e?.message ?? 'Failed to edit image.');
+    } catch (error: unknown) {
+      console.error('[ImageEditor] edit failed', error);
+      setError(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }

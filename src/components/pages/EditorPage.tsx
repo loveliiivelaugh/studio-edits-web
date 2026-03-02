@@ -427,7 +427,6 @@ import {
   Stack,
   Typography,
   useMediaQuery,
-  Theme,
   Tooltip,
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -460,24 +459,27 @@ export function BottomToolBar<T extends string>({
   activeTool,
   setActiveTool,
   onExit,
+  isDesktop,
 }: {
   toolDefs: ToolDef<T>[];
   activeTool: T;
   setActiveTool: (t: T) => void;
   onExit: () => void;
+  isDesktop: boolean;
 }) {
   return (
     <Box
       sx={{
         position: 'fixed',
-        left: 0,
-        right: 0,
-        bottom: 0,
+        left: isDesktop ? 'auto' : 0,
+        right: isDesktop ? 16 : 0,
+        bottom: isDesktop ? '50%' : 0,
+        transform: isDesktop ? 'translateY(50%)' : 'none',
         zIndex: 50,
-        px: 1.25,
-        pb: 1.25,
+        px: isDesktop ? 0 : 1.25,
+        pb: isDesktop ? 0 : 1.25,
         // keeps it comfy above iOS PWA safe-area
-        paddingBottom: 'calc(env(safe-area-inset-bottom) + 10px)',
+        paddingBottom: isDesktop ? 0 : 'calc(env(safe-area-inset-bottom) + 10px)',
         pointerEvents: 'none',
       }}
     >
@@ -489,18 +491,23 @@ export function BottomToolBar<T extends string>({
         elevation={0}
         sx={{
           pointerEvents: 'auto',
-          mx: 'auto',
-          maxWidth: 980,
-          borderRadius: 999,
+          mx: isDesktop ? 0 : 'auto',
+          maxWidth: isDesktop ? 76 : 980,
+          borderRadius: isDesktop ? 24 : 999,
           border: '1px solid rgba(148,163,184,0.20)',
           bgcolor: 'rgba(2,6,23,0.70)',
           backdropFilter: 'blur(12px)',
           boxShadow: '0 18px 60px rgba(0,0,0,0.45)',
-          px: 1,
-          py: 0.75,
+          px: isDesktop ? 0.55 : 1,
+          py: isDesktop ? 0.8 : 0.75,
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+        <Stack
+          direction={isDesktop ? 'column' : 'row'}
+          alignItems="center"
+          justifyContent="space-between"
+          spacing={1}
+        >
           {/* EXIT */}
           <Tooltip title="Exit editor" placement="top">
             <IconButton
@@ -522,14 +529,19 @@ export function BottomToolBar<T extends string>({
           {/* TOOLS */}
           <Box
             sx={{
-              flex: 1,
-              overflowX: 'auto',
-              px: 0.75,
+              flex: isDesktop ? 'none' : 1,
+              overflowX: isDesktop ? 'visible' : 'auto',
+              px: isDesktop ? 0 : 0.75,
               '&::-webkit-scrollbar': { height: 6 },
               '&::-webkit-scrollbar-thumb': { background: 'rgba(148,163,184,0.22)', borderRadius: 999 },
             }}
           >
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ width: 'max-content' }}>
+            <Stack
+              direction={isDesktop ? 'column' : 'row'}
+              spacing={1}
+              alignItems="center"
+              sx={{ width: isDesktop ? 'auto' : 'max-content' }}
+            >
               {toolDefs.map((t) => {
                 const active = activeTool === t.key;
                 return (
@@ -567,8 +579,7 @@ export function BottomToolBar<T extends string>({
             </Stack>
           </Box>
 
-          {/* spacer to balance exit button */}
-          <Box sx={{ width: 46 }} />
+          {!isDesktop && <Box sx={{ width: 46 }} />}
         </Stack>
       </Paper>
     </Box>
@@ -612,7 +623,7 @@ export default function EditorPage() {
   );
 
   const ui = useEditorUiStore();
-  const isLandscape = useMediaQuery((t: Theme) => t.breakpoints.up('md'));
+  const isLandscape = useMediaQuery('(min-width:900px)');
 
   React.useEffect(() => {
     ui.setSelectedProjectId(projectId);
@@ -877,6 +888,7 @@ export default function EditorPage() {
         activeTool={ui.activeTool}
         setActiveTool={ui.setActiveTool}
         onExit={() => navigate('/')} // or nav(-1)
+        isDesktop={isLandscape}
       />
 
       {/* Small “active tool” toast */}

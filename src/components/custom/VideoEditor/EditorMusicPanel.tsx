@@ -24,7 +24,12 @@ import { motion } from 'framer-motion';
 
 import { useStudioStore, type MusicTrack, type Project } from '@store/useStudioStore';
 import { useEditorUiStore } from '@store/useEditorUiStore';
-import {client} from '@api/index'; // adjust to your axios client path
+import { openstudioClient } from '@api/index';
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return 'Request failed.';
+}
 
 function formatTime(seconds: number) {
   const s = Math.max(0, Math.floor(seconds));
@@ -63,13 +68,13 @@ export default function EditorMusicPanelWeb({
 
     setIsLoadingMusic(true);
     try {
-      const res = await client.get('/api/v1/openstudio/assets/music');
+      const res = await openstudioClient.get('/assets/music');
       const data = res.data as { tracks: MusicTrack[] };
       setMusicTracks(data.tracks || []);
       setShowMusicPicker(true);
-    } catch (e: any) {
-      console.error('[Music] Failed to load tracks', e);
-      setMsg({ type: 'error', text: e?.message ?? 'Could not load tracks right now.' });
+    } catch (error: unknown) {
+      console.error('[Music] Failed to load tracks', error);
+      setMsg({ type: 'error', text: getErrorMessage(error) });
     } finally {
       setIsLoadingMusic(false);
     }
@@ -78,14 +83,14 @@ export default function EditorMusicPanelWeb({
   const fetchBeatsForTrack = React.useCallback(
     async (trackId: string) => {
       try {
-        const res = await client.get(`/api/v1/openstudio/assets/music/${trackId}/beats`);
+        const res = await openstudioClient.get(`/assets/music/${trackId}/beats`);
         const data = res.data as { beats: number[] };
         updateProject(project.id, (p) => ({
           ...p,
           music: p.music ? { ...p.music, beats: data.beats ?? [] } : p.music,
         }));
-      } catch (e: any) {
-        console.warn('[Music] Beats fetch failed', e);
+      } catch (error: unknown) {
+        console.warn('[Music] Beats fetch failed', error);
         // not fatal
       }
     },
@@ -95,10 +100,10 @@ export default function EditorMusicPanelWeb({
   const stopPreview = React.useCallback(async () => {
     const el = audioRef.current;
     if (!el) return;
-    try {
-      el.pause();
+    el.pause();
+    if (Number.isFinite(el.duration)) {
       el.currentTime = 0;
-    } catch {}
+    }
     setIsPreviewPlaying(false);
   }, []);
 
@@ -175,8 +180,8 @@ export default function EditorMusicPanelWeb({
         el.pause();
         setIsPreviewPlaying(false);
       }
-    } catch (e: any) {
-      console.warn('[Music] Preview play failed', e);
+    } catch (error: unknown) {
+      console.warn('[Music] Preview play failed', error);
       setMsg({ type: 'error', text: 'Browser blocked autoplay — click again to play.' });
     }
   }, [project.music]);
