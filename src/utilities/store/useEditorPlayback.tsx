@@ -1,7 +1,7 @@
 // src/utilities/store/useEditorPlayback.ts (WEB)
 // NOTE: This version is for HTMLVideoElement (web). No Expo AV methods.
 
-import { useMemo, useRef, useCallback, useEffect } from 'react';
+import { useMemo, useRef, useCallback, useEffect, useState } from 'react';
 import type { Project, Clip } from '@store/useStudioStore';
 import { useEditorUiStore } from '@store/useEditorUiStore';
 
@@ -21,6 +21,8 @@ function clamp(n: number, a: number, b: number) {
 
 export function useEditorPlayback({ project, smartPreviewUrl }: Args) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   const {
     selectedClipId,
@@ -79,13 +81,22 @@ export function useEditorPlayback({ project, smartPreviewUrl }: Args) {
     }
   }, [totalDuration, projectDuration, setProjectDuration, isRenderedPreview]);
 
-  // which video URI should the <video> show
-  const videoSourceUri =
-    isRenderedPreview && smartPreviewUrl
-      ? smartPreviewUrl
-      : selectedClip
-      ? (selectedClip.localUri ?? selectedClip.uri)
-      : undefined;
+  const sourceCandidates = useMemo(() => {
+    if (isRenderedPreview && smartPreviewUrl) return [smartPreviewUrl];
+    if (!selectedClip) return [];
+
+    const next = [selectedClip.localUri, selectedClip.remoteUri, selectedClip.uri].filter(
+      (value): value is string => Boolean(value)
+    );
+    return Array.from(new Set(next));
+  }, [isRenderedPreview, selectedClip, smartPreviewUrl]);
+
+  useEffect(() => {
+    setSourceIndex(0);
+    setPlaybackError(null);
+  }, [selectedClip?.id, isRenderedPreview, smartPreviewUrl]);
+
+  const videoSourceUri = sourceCandidates[sourceIndex];
 
   const durationForScrubber = isRenderedPreview
     ? (projectDuration || 0)
@@ -306,9 +317,24 @@ export function useEditorPlayback({ project, smartPreviewUrl }: Args) {
       return;
     }
 
-    await vid.play().catch(() => {});
-    setIsPlaying(true);
+    try {
+      await vid.play();
+      setPlaybackError(null);
+      setIsPlaying(true);
+    } catch {
+      setIsPlaying(false);
+      setPlaybackError('This video could not be played in your browser.');
+    }
   }, [setIsPlaying]);
+
+  const handleVideoError = useCallback(() => {
+    if (sourceIndex < sourceCandidates.length - 1) {
+      setSourceIndex((current) => current + 1);
+      return;
+    }
+    setIsPlaying(false);
+    setPlaybackError('No playable source was found for this clip.');
+  }, [setIsPlaying, sourceCandidates.length, sourceIndex]);
 
   const handleScrubStart = useCallback(() => {
     const vid = videoRef.current;
@@ -406,5 +432,7 @@ export function useEditorPlayback({ project, smartPreviewUrl }: Args) {
     activeTransition,
 
     replay,
+    handleVideoError,
+    playbackError,
   };
 }

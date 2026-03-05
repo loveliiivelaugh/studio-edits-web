@@ -432,7 +432,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useStudioStore } from '@store/useStudioStore';
-import { useEditorUiStore } from '@store/useEditorUiStore';
+import { useEditorUiStore, type ActiveTool } from '@store/useEditorUiStore';
 import { useEditorPlayback } from '@store/useEditorPlayback';
 import { useSmartEdit } from '@store/useSmartEdit';
 
@@ -451,19 +451,20 @@ import ImageEditorAiChatPanelWeb from '@components/custom/VideoEditor/ImageEdito
 import EditorChatPanelWeb from '@components/custom/VideoEditor/EditorChatPanel';
 import EditorAIPanelWeb from '@components/custom/VideoEditor/EditorAiPanel';
 import EditorMlPanelWeb from '@components/custom/VideoEditor/EditorMlPanel';
+import EditorTransport from '@components/custom/VideoEditor/EditorTransport';
 
-type ToolDef<T extends string> = { key: T; label: string; emoji: string };
+type ToolDef = { key: Exclude<ActiveTool, 'none'>; label: string; emoji: string };
 
-export function BottomToolBar<T extends string>({
+export function BottomToolBar({
   toolDefs,
   activeTool,
   setActiveTool,
   onExit,
   isDesktop,
 }: {
-  toolDefs: ToolDef<T>[];
-  activeTool: T;
-  setActiveTool: (t: T) => void;
+  toolDefs: ToolDef[];
+  activeTool: ActiveTool;
+  setActiveTool: (t: ActiveTool) => void;
   onExit: () => void;
   isDesktop: boolean;
 }) {
@@ -547,7 +548,7 @@ export function BottomToolBar<T extends string>({
                 return (
                   <Tooltip key={t.key} title={`${t.emoji} ${t.label}`} placement="top">
                     <IconButton
-                      onClick={() => setActiveTool(t.key)}
+                      onClick={() => setActiveTool(activeTool === t.key ? 'none' : t.key)}
                       sx={{
                         width: 46,
                         height: 46,
@@ -601,11 +602,7 @@ const EmptyState = () => (
   </Box>
 );
 
-const toolDefs: Array<{
-  key: import('@store/useEditorUiStore').ActiveTool;
-  label: string;
-  emoji: string;
-}> = [
+const toolDefs: ToolDef[] = [
   { key: 'timeline', label: 'Timeline', emoji: '🎥' },
   { key: 'text', label: 'Text', emoji: '✏️' },
   { key: 'music', label: 'Music', emoji: '🎵' },
@@ -688,7 +685,7 @@ export default function EditorPage() {
           sx={{
             width: '100%',
             height: '100%',
-            maxHeight: '80%',
+            maxHeight: isLandscape ? '92%' : '86%',
             borderRadius: 3,
             border: '1px solid rgba(148,163,184,0.18)',
             background:
@@ -706,6 +703,7 @@ export default function EditorPage() {
               src={playback.videoSourceUri}
               playsInline
               preload="metadata"
+              onError={playback.handleVideoError}
               style={{
                 width: '100%',
                 height: '100%',
@@ -739,71 +737,51 @@ export default function EditorPage() {
               left: 16,
               right: 16,
               bottom: 84,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 2,
-              pointerEvents: 'none',
+              pointerEvents: 'auto',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-              <Box
-                sx={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: 999,
-                  bgcolor: '#6366f1',
-                  boxShadow: '0 0 0 6px rgba(99,102,241,0.15)',
-                }}
-              />
-              <Button
-                component={motion.button}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (showReplay) playback.replay();
-                  else playback.togglePlayPause();
-                }}
-                sx={{
-                  pointerEvents: 'auto',
-                  textTransform: 'none',
-                  borderRadius: 999,
-                  px: 2,
-                  py: 0.75,
-                  fontWeight: 900,
-                  bgcolor: '#4f46e5',
-                  color: '#E0E7FF',
-                  '&:hover': { bgcolor: '#4338CA' },
-                  minWidth: 88,
-                }}
-              >
-                {ui.isPlaying ? 'Pause' : showReplay ? 'Replay' : 'Play'}
-              </Button>
-            </Box>
+            <EditorTransport
+              isPlaying={ui.isPlaying}
+              currentTime={ui.currentTime}
+              duration={playback.duration}
+              onTogglePlay={() => {
+                if (showReplay) playback.replay();
+                else playback.togglePlayPause();
+              }}
+              onSeek={playback.handleScrubComplete}
+            />
+          </Box>
 
-            <Typography
+          {playback.playbackError && (
+            <Box
               sx={{
-                pointerEvents: 'none',
-                color: 'rgba(148,163,184,0.9)',
-                fontSize: 12,
-                fontWeight: 800,
+                position: 'absolute',
+                left: 16,
+                right: 16,
+                bottom: 16,
+                p: 1,
+                borderRadius: 2,
+                border: '1px solid rgba(239,68,68,0.4)',
+                bgcolor: 'rgba(127,29,29,0.45)',
               }}
             >
-              {formatTime(ui.currentTime)} / {formatTime(playback.duration)}
-            </Typography>
-          </Box>
+              <Typography sx={{ color: '#FCA5A5', fontSize: 12, fontWeight: 700 }}>
+                {playback.playbackError}
+              </Typography>
+            </Box>
+          )}
 
         </Box>
         {/* bottom-left panel content */}
+        {ui.activeTool !== 'none' && (
         <Box
-            sx={{
-                position: 'absolute',
-                left: 16,
-                bottom: 8,
-                // width: isLandscape ? 520 : 340,
-                maxWidth: '85vw',
-                p: 2,
-            }}
+          sx={{
+            position: 'absolute',
+            left: 16,
+            bottom: 8,
+            maxWidth: '85vw',
+            p: 2,
+          }}
         >
             {/* @ts-expect-error */}
         {ui.activeTool === 'timeline' && <EditorTimeline ui={ui} project={project} />}
@@ -830,6 +808,7 @@ export default function EditorPage() {
 
         {/* plug in other panels later */}
         </Box>
+        )}
       </Box>
 
       {/* RIGHT TOOL DOCK */}
