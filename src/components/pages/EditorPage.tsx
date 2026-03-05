@@ -685,7 +685,7 @@ export default function EditorPage() {
           sx={{
             width: '100%',
             height: '100%',
-            maxHeight: '80%',
+            maxHeight: isLandscape ? '92%' : '86%',
             borderRadius: 3,
             border: '1px solid rgba(148,163,184,0.18)',
             background:
