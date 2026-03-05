@@ -432,7 +432,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useStudioStore } from '@store/useStudioStore';
-import { useEditorUiStore } from '@store/useEditorUiStore';
+import { useEditorUiStore, type ActiveTool } from '@store/useEditorUiStore';
 import { useEditorPlayback } from '@store/useEditorPlayback';
 import { useSmartEdit } from '@store/useSmartEdit';
 
@@ -453,18 +453,18 @@ import EditorAIPanelWeb from '@components/custom/VideoEditor/EditorAiPanel';
 import EditorMlPanelWeb from '@components/custom/VideoEditor/EditorMlPanel';
 import EditorTransport from '@components/custom/VideoEditor/EditorTransport';
 
-type ToolDef<T extends string> = { key: T; label: string; emoji: string };
+type ToolDef = { key: Exclude<ActiveTool, 'none'>; label: string; emoji: string };
 
-export function BottomToolBar<T extends string>({
+export function BottomToolBar({
   toolDefs,
   activeTool,
   setActiveTool,
   onExit,
   isDesktop,
 }: {
-  toolDefs: ToolDef<T>[];
-  activeTool: T;
-  setActiveTool: (t: T) => void;
+  toolDefs: ToolDef[];
+  activeTool: ActiveTool;
+  setActiveTool: (t: ActiveTool) => void;
   onExit: () => void;
   isDesktop: boolean;
 }) {
@@ -548,7 +548,7 @@ export function BottomToolBar<T extends string>({
                 return (
                   <Tooltip key={t.key} title={`${t.emoji} ${t.label}`} placement="top">
                     <IconButton
-                      onClick={() => setActiveTool(t.key)}
+                      onClick={() => setActiveTool(activeTool === t.key ? 'none' : t.key)}
                       sx={{
                         width: 46,
                         height: 46,
@@ -602,11 +602,7 @@ const EmptyState = () => (
   </Box>
 );
 
-const toolDefs: Array<{
-  key: import('@store/useEditorUiStore').ActiveTool;
-  label: string;
-  emoji: string;
-}> = [
+const toolDefs: ToolDef[] = [
   { key: 'timeline', label: 'Timeline', emoji: '🎥' },
   { key: 'text', label: 'Text', emoji: '✏️' },
   { key: 'music', label: 'Music', emoji: '🎵' },
@@ -777,15 +773,15 @@ export default function EditorPage() {
 
         </Box>
         {/* bottom-left panel content */}
+        {ui.activeTool !== 'none' && (
         <Box
-            sx={{
-                position: 'absolute',
-                left: 16,
-                bottom: 8,
-                // width: isLandscape ? 520 : 340,
-                maxWidth: '85vw',
-                p: 2,
-            }}
+          sx={{
+            position: 'absolute',
+            left: 16,
+            bottom: 8,
+            maxWidth: '85vw',
+            p: 2,
+          }}
         >
             {/* @ts-expect-error */}
         {ui.activeTool === 'timeline' && <EditorTimeline ui={ui} project={project} />}
@@ -812,6 +808,7 @@ export default function EditorPage() {
 
         {/* plug in other panels later */}
         </Box>
+        )}
       </Box>
 
       {/* RIGHT TOOL DOCK */}
