@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loveliiivelaugh.github.io/studio-edits-web/schema/project.schema.json",
+  "title": "Studio Edits Project",
+  "type": "object",
+  "required": ["version", "projectId", "assets", "timeline", "renderSettings"],
+  "properties": {
+    "version": { "type": "string", "enum": ["1.0.0"] },
+    "projectId": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "assets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/asset" }
+    },
+    "timeline": { "$ref": "#/$defs/timeline" },
+    "captions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/caption" }
+    },
+    "effects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/effect" }
+    },
+    "renderSettings": { "$ref": "#/$defs/renderSettings" }
+  },
+  "$defs": {
+    "asset": {
+      "type": "object",
+      "required": ["id", "type", "uri", "durationMs"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["video", "audio", "image"] },
+        "uri": { "type": "string" },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "metadata": { "type": "object" }
+      }
+    },
+    "timeline": {
+      "type": "object",
+      "required": ["tracks"],
+      "properties": {
+        "tracks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/track" }
+        }
+      }
+    },
+    "track": {
+      "type": "object",
+      "required": ["id", "type", "clips"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["video", "audio", "overlay"] },
+        "clips": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/clip" }
+        }
+      }
+    },
+    "clip": {
+      "type": "object",
+      "required": ["id", "assetId", "startMs", "endMs", "inMs", "outMs"],
+      "properties": {
+        "id": { "type": "string" },
+        "assetId": { "type": "string" },
+        "startMs": { "type": "integer", "minimum": 0 },
+        "endMs": { "type": "integer", "minimum": 0 },
+        "inMs": { "type": "integer", "minimum": 0 },
+        "outMs": { "type": "integer", "minimum": 0 },
+        "effects": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/effectRef" }
+        }
+      }
+    },
+    "caption": {
+      "type": "object",
+      "required": ["id", "startMs", "endMs", "text"],
+      "properties": {
+        "id": { "type": "string" },
+        "startMs": { "type": "integer", "minimum": 0 },
+        "endMs": { "type": "integer", "minimum": 0 },
+        "text": { "type": "string" },
+        "style": { "type": "object" }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "params": { "type": "object" }
+      }
+    },
+    "effectRef": {
+      "type": "object",
+      "required": ["effectId"],
+      "properties": {
+        "effectId": { "type": "string" }
+      }
+    },
+    "renderSettings": {
+      "type": "object",
+      "required": ["resolution", "fps", "format"],
+      "properties": {
+        "resolution": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "fps": { "type": "integer", "minimum": 1 },
+        "format": { "type": "string", "enum": ["mp4", "mov"] },
+        "bitrateKbps": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
