@@ -31,6 +31,16 @@ See: `supabase/migrations/20260313_jobs_mq.sql`
 ### Polling
 Workers should claim jobs using `lease_job(type)` (see SQL function) which uses `FOR UPDATE SKIP LOCKED`.
 
+Leasing behavior:
+- Claims at most one oldest `queued` job for the requested `type`.
+- Uses row-level locking (`FOR UPDATE SKIP LOCKED`) so concurrent workers do not claim the same row.
+- Moves the row to `running`, sets `started_at`, and increments `attempts` atomically.
+
+### Idempotency / dedupe
+- `dedupe_key` is optional and is used by producers to make enqueue idempotent.
+- A partial unique index (`jobs_mq_dedupe_idx`) enforces uniqueness for non-null `dedupe_key` values.
+- If an insert reuses an existing `dedupe_key`, treat the unique violation as "already enqueued".
+
 ### Acknowledgement
 - On claim, set `status=running`, `started_at=now()`, increment `attempts`.
 - On success, set `status=completed`, `completed_at=now()`.
